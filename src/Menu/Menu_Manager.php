@@ -162,8 +162,8 @@ class Menu_Manager
                        max="2000">
             </label>
         </fieldset>
-        <fieldset class="mega-menu-ajax-preload-settings" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
-            <legend style="font-weight: 600; margin-bottom: 5px;"><?php esc_html_e('Page Preload on Hover', 'mega-menu-ajax'); ?></legend>
+        <fieldset class="mega-menu-ajax-preload-settings">
+            <h4 style="margin: 15px 0 10px; font-weight: 600;"><?php esc_html_e('Page Preload on Hover', 'mega-menu-ajax'); ?></h4>
             <label>
                 <input type="checkbox" 
                        name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_enabled]" 
@@ -179,7 +179,7 @@ class Menu_Manager
                        value="<?php echo esc_attr($settings['preload_delay'] ?? 30); ?>" 
                        min="0" 
                        max="2000"
-                       style="width: 70px;">
+                       class="small-text">
             </label>
             <br>
             <label>
