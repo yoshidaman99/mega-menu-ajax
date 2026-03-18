@@ -57,7 +57,7 @@ class Page_Preload
         }
 
         $response = wp_remote_get($url, [
-            'timeout' => 2,
+            'timeout' => 1,
             'sslverify' => false,
             'user-agent' => 'Mega-Menu-Ajax-Preload/' . MEGA_MENU_AJAX_VERSION,
         ]);
@@ -78,7 +78,7 @@ class Page_Preload
 
         $data = apply_filters('mega_menu_ajax_preload_data', $data, $item_id, $html);
 
-        set_transient($transient_key, $data, HOUR_IN_SECONDS);
+        set_transient($transient_key, $data, 6 * HOUR_IN_SECONDS);
 
         return $data;
     }

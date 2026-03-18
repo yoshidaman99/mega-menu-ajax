@@ -418,6 +418,7 @@
 
                 self.preconnectUrl(href);
                 self.nativePrefetch(href);
+                self.aggressiveFetch(href);
 
                 self.prerenderTimers = self.prerenderTimers || {};
                 var timerKey = href.replace(/[^a-zA-Z0-9]/g, '_');
@@ -427,10 +428,9 @@
                 }
 
                 self.prerenderTimers[timerKey] = setTimeout(function () {
-                    self.aggressiveFetch(href);
                     self.nativePrerender(href);
                     self.speculationPrerender(href);
-                }, 65);
+                }, 20);
 
                 var $item = $link.parent();
                 var $wrap = $item.closest('.mega-menu-wrap, .mega-menu-ajax-wrap');
@@ -442,7 +442,7 @@
 
                     self.preloadTimers[itemId] = setTimeout(function () {
                         self.preloadPage($item, href, itemId, settings);
-                    }, 100);
+                    }, 20);
                 }
             });
 
