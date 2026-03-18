@@ -16,14 +16,14 @@
         },
 
         init: function () {
-            this.debug = typeof megaMenuAjax !== 'undefined' && megaMenuAjax.debug;
-            
-            this.log('Initializing...', megaMenuAjax);
-            
             if (typeof megaMenuAjax === 'undefined') {
                 console.error('[MegaMenuAjax] Configuration not found. Plugin may not be properly loaded.');
                 return;
             }
+            
+            this.debug = megaMenuAjax.debug;
+            
+            this.log('Initializing...', megaMenuAjax);
             
             this.detectCompatMode();
             
@@ -41,12 +41,17 @@
             this.initLazyLoad();
             this.initSearch();
             this.initPreload();
+            this.markLazySubmenus();
             
             this.log('Initialized successfully');
         },
 
         detectCompatMode: function () {
             this.compatMode = document.querySelectorAll('.mega-menu-wrap, .max-mega-menu').length > 0;
+        },
+
+        markLazySubmenus: function () {
+            return;
         },
 
         getItemSelector: function () {
@@ -95,16 +100,18 @@
             });
 
             $(document).on('mouseenter', itemSelector + '.' + hasChildrenClass, function (e) {
+                if (self.compatMode) {
+                    return;
+                }
+                
                 var $item = $(this);
                 var $submenu = $item.children(submenuSelector).first();
                 var itemId = self.getItemId($item);
 
-                var isLazy = self.compatMode 
-                    ? $submenu.hasClass('mega-menu-ajax-lazy') || $submenu.children().length === 0
-                    : $submenu.hasClass('mega-menu-ajax-lazy');
+                var isLazy = $submenu.hasClass('mega-menu-ajax-lazy');
                 var isLoaded = $submenu.data('loaded');
 
-                self.log('Has children hover - ID:', itemId, 'lazy:', isLazy, 'loaded:', isLoaded, 'children:', $submenu.children().length);
+                self.log('Has children hover - ID:', itemId, 'lazy:', isLazy, 'loaded:', isLoaded);
 
                 if (isLazy && !isLoaded) {
                     self.loadSubmenu($item, $submenu, itemId);
@@ -393,36 +400,47 @@
             var self = this;
             var itemSelector = this.getItemSelector();
 
-            if (!megaMenuAjax.preload || Object.keys(megaMenuAjax.preload).length === 0) {
-                return;
-            }
-
+            self.prefetchedUrls = {};
+            self.prerenderedUrls = {};
             self.preloadCache = {};
             self.preloadTimers = {};
             self.preloadedUrls = {};
+            self.pendingAjaxRequests = [];
 
             $(document).on('mouseenter', itemSelector + ' > a', function (e) {
                 var $link = $(this);
+                var href = $link.attr('href');
+
+                if (!href || href === '#' || href.indexOf('javascript:') === 0) {
+                    return;
+                }
+
+                self.nativePrefetch(href);
+
                 var $item = $link.parent();
                 var $wrap = $item.closest('.mega-menu-wrap, .mega-menu-ajax-wrap');
                 var location = $wrap.data('location') || $wrap.attr('id');
 
-                if (!location || !megaMenuAjax.preload[location]) {
-                    return;
+                if (location && megaMenuAjax.preload && megaMenuAjax.preload[location]) {
+                    var itemId = self.getItemId($item);
+                    var settings = megaMenuAjax.preload[location];
+                    var delay = settings.delay || 50;
+
+                    self.preloadTimers[itemId] = setTimeout(function () {
+                        self.preloadPage($item, href, itemId, settings);
+                    }, delay);
                 }
+            });
 
-                var href = $link.attr('href');
-                if (!href || href === '#' || self.preloadedUrls[href]) {
-                    return;
+            $(document).on('mousedown', itemSelector + ' > a', function (e) {
+                var href = $(this).attr('href');
+                if (href && href !== '#' && href.indexOf('javascript:') !== 0) {
+                    self.nativePrerender(href);
                 }
+            });
 
-                var itemId = self.getItemId($item);
-                var settings = megaMenuAjax.preload[location];
-                var delay = settings.delay || 30;
-
-                self.preloadTimers[itemId] = setTimeout(function () {
-                    self.preloadPage($item, href, itemId, settings);
-                }, delay);
+            $(document).on('click', itemSelector + ' > a', function (e) {
+                self.cancelPendingRequests();
             });
 
             $(document).on('mouseleave', itemSelector + ' > a', function (e) {
@@ -436,6 +454,71 @@
             });
         },
 
+        nativePrefetch: function (url) {
+            if (this.prefetchedUrls[url]) {
+                return;
+            }
+
+            this.prefetchedUrls[url] = true;
+
+            var link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = url;
+            link.as = 'document';
+            link.onload = function () {
+                MegaMenuAjax.log('Native prefetch complete:', url);
+            };
+            link.onerror = function () {
+                MegaMenuAjax.log('Native prefetch failed:', url);
+            };
+
+            document.head.appendChild(link);
+            this.log('Native prefetch started:', url);
+        },
+
+        nativePrerender: function (url) {
+            if (this.prerenderedUrls[url]) {
+                return;
+            }
+
+            this.prerenderedUrls[url] = true;
+
+            var existing = document.querySelector('link[rel="prerender"][href="' + url + '"]');
+            if (existing) {
+                return;
+            }
+
+            var oldPrerenders = document.querySelectorAll('link[rel="prerender"]');
+            oldPrerenders.forEach(function (el) {
+                el.parentNode.removeChild(el);
+            });
+
+            var link = document.createElement('link');
+            link.rel = 'prerender';
+            link.href = url;
+
+            document.head.appendChild(link);
+            this.log('Native prerender started:', url);
+        },
+
+        cancelPendingRequests: function () {
+            var self = this;
+
+            for (var key in self.preloadTimers) {
+                clearTimeout(self.preloadTimers[key]);
+                delete self.preloadTimers[key];
+            }
+
+            self.pendingAjaxRequests.forEach(function (xhr) {
+                if (xhr && xhr.abort) {
+                    xhr.abort();
+                }
+            });
+            self.pendingAjaxRequests = [];
+
+            self.log('Cancelled pending preload requests');
+        },
+
         preloadPage: function ($item, url, itemId, settings) {
             var self = this;
 
@@ -445,7 +528,7 @@
 
             $item.addClass('mega-menu-ajax-preloading');
 
-            $.ajax({
+            var xhr = $.ajax({
                 url: megaMenuAjax.ajaxUrl,
                 type: 'POST',
                 data: {
@@ -464,10 +547,15 @@
                         self.injectPreloads(data.assets, settings);
                     }
                 },
-                error: function () {
+                error: function (xhr, status, error) {
                     $item.removeClass('mega-menu-ajax-preloading');
+                    if (status !== 'abort') {
+                        self.log('Preload error:', status, error);
+                    }
                 }
             });
+
+            self.pendingAjaxRequests.push(xhr);
         },
 
         injectPreloads: function (assets, settings) {

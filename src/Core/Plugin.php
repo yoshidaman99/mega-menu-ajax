@@ -31,6 +31,7 @@ class Plugin
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('wp_nav_menu_args', [$this, 'filter_nav_menu_args'], 100);
+        add_filter('megamenu_nav_menu_css_class', [$this, 'add_lazy_class_to_megamenu'], 10, 3);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
     }
 
@@ -77,10 +78,14 @@ class Plugin
         $settings = get_option('mega_menu_ajax_settings', []);
         $preload_settings = [];
         $enabled_locations = [];
+        $ajax_submenu_locations = [];
         
         foreach ($settings as $location => $location_settings) {
             if (!empty($location_settings['enabled'])) {
                 $enabled_locations[] = $location;
+            }
+            if (!empty($location_settings['ajax_submenu'])) {
+                $ajax_submenu_locations[] = $location;
             }
             if (!empty($location_settings['preload_enabled'])) {
                 $preload_settings[$location] = [
@@ -99,6 +104,7 @@ class Plugin
             'nonce' => wp_create_nonce('mega_menu_ajax_nonce'),
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
             'enabledLocations' => $enabled_locations,
+            'ajaxSubmenuLocations' => $ajax_submenu_locations,
             'registeredLocations' => array_keys(get_registered_nav_menus()),
             'preload' => $preload_settings,
             'i18n' => [
@@ -177,6 +183,24 @@ class Plugin
         $args['container_class'] = trim('mega-menu-ajax-wrap mega-menu-ajax-wrap-' . esc_attr($location) . ' ' . ($args['container_class'] ?? ''));
 
         return $args;
+    }
+
+    public function add_lazy_class_to_megamenu($classes, $item, $args)
+    {
+        $settings = get_option('mega_menu_ajax_settings', []);
+        $location = $args->theme_location ?? '';
+        
+        if (empty($location) || empty($settings[$location]['enabled']) || empty($settings[$location]['ajax_submenu'])) {
+            return $classes;
+        }
+        
+        $is_top_level = empty($item->menu_item_parent) || $item->menu_item_parent == 0;
+        
+        if ($is_top_level && in_array('mega-menu-item-has-children', $classes, true)) {
+            $classes[] = 'mega-menu-ajax-lazy-parent';
+        }
+        
+        return $classes;
     }
 
     public function register_rest_routes()

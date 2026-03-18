@@ -57,7 +57,7 @@ class Page_Preload
         }
 
         $response = wp_remote_get($url, [
-            'timeout' => 10,
+            'timeout' => 2,
             'sslverify' => false,
             'user-agent' => 'Mega-Menu-Ajax-Preload/' . MEGA_MENU_AJAX_VERSION,
         ]);
