@@ -10,6 +10,7 @@
             this.initMobileToggle();
             this.initLazyLoad();
             this.initSearch();
+            this.initPreload();
         },
 
         bindEvents: function () {
@@ -258,6 +259,137 @@
                     $('.mega-menu-ajax-search-results').hide();
                 }
             });
+        },
+
+        initPreload: function () {
+            var self = this;
+
+            if (!megaMenuAjax.preload || Object.keys(megaMenuAjax.preload).length === 0) {
+                return;
+            }
+
+            self.preloadCache = {};
+            self.preloadTimers = {};
+            self.preloadedUrls = {};
+
+            $(document).on('mouseenter', '.mega-menu-ajax-item > a', function (e) {
+                var $link = $(this);
+                var $item = $link.parent();
+                var $wrap = $item.closest('.mega-menu-ajax-wrap');
+                var location = $wrap.data('location');
+
+                if (!location || !megaMenuAjax.preload[location]) {
+                    return;
+                }
+
+                var href = $link.attr('href');
+                if (!href || href === '#' || self.preloadedUrls[href]) {
+                    return;
+                }
+
+                var itemId = $item.data('menu-item-id');
+                var settings = megaMenuAjax.preload[location];
+                var delay = settings.delay || 30;
+
+                self.preloadTimers[itemId] = setTimeout(function () {
+                    self.preloadPage($item, href, itemId, settings);
+                }, delay);
+            });
+
+            $(document).on('mouseleave', '.mega-menu-ajax-item > a', function (e) {
+                var $item = $(this).parent();
+                var itemId = $item.data('menu-item-id');
+
+                if (self.preloadTimers[itemId]) {
+                    clearTimeout(self.preloadTimers[itemId]);
+                    delete self.preloadTimers[itemId];
+                }
+            });
+        },
+
+        preloadPage: function ($item, url, itemId, settings) {
+            var self = this;
+
+            if (self.preloadedUrls[url]) {
+                return;
+            }
+
+            $item.addClass('mega-menu-ajax-preloading');
+
+            $.ajax({
+                url: megaMenuAjax.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'mega_menu_ajax_preload_page',
+                    item_id: itemId,
+                    nonce: megaMenuAjax.nonce
+                },
+                success: function (response) {
+                    $item.removeClass('mega-menu-ajax-preloading');
+
+                    if (response.success && response.data) {
+                        var data = response.data;
+                        self.preloadCache[url] = data;
+                        self.preloadedUrls[url] = true;
+
+                        self.injectPreloads(data.assets, settings);
+                    }
+                },
+                error: function () {
+                    $item.removeClass('mega-menu-ajax-preloading');
+                }
+            });
+        },
+
+        injectPreloads: function (assets, settings) {
+            var self = this;
+            var head = document.head || document.getElementsByTagName('head')[0];
+
+            if (assets.css && settings.preload_css) {
+                assets.css.forEach(function (url) {
+                    if (!self.isAlreadyPreloaded(url, 'style')) {
+                        var link = document.createElement('link');
+                        link.rel = 'preload';
+                        link.as = 'style';
+                        link.href = url;
+                        head.appendChild(link);
+                    }
+                });
+            }
+
+            if (assets.js && settings.preload_js) {
+                assets.js.forEach(function (url) {
+                    if (!self.isAlreadyPreloaded(url, 'script')) {
+                        var link = document.createElement('link');
+                        link.rel = 'preload';
+                        link.as = 'script';
+                        link.href = url;
+                        head.appendChild(link);
+                    }
+                });
+            }
+
+            if (assets.images && settings.preload_images) {
+                assets.images.forEach(function (url) {
+                    if (!self.isAlreadyPreloaded(url, 'image')) {
+                        var link = document.createElement('link');
+                        link.rel = 'preload';
+                        link.as = 'image';
+                        link.href = url;
+                        head.appendChild(link);
+                    }
+                });
+            }
+        },
+
+        isAlreadyPreloaded: function (url, type) {
+            var selector = 'link[rel="preload"][href="' + url + '"]';
+            if (type === 'style') {
+                selector += ', link[rel="stylesheet"][href="' + url + '"]';
+            } else if (type === 'script') {
+                selector += ', script[src="' + url + '"]';
+            }
+            return document.querySelector(selector) !== null;
         }
     };
 

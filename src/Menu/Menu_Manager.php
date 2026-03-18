@@ -70,6 +70,11 @@ class Menu_Manager
                     'search_enabled' => !empty($settings['search_enabled']),
                     'effect' => sanitize_text_field($settings['effect'] ?? 'fade'),
                     'mobile_breakpoint' => absint($settings['mobile_breakpoint'] ?? 768),
+                    'preload_enabled' => !empty($settings['preload_enabled']),
+                    'preload_delay' => absint($settings['preload_delay'] ?? 30),
+                    'preload_css' => !empty($settings['preload_css']),
+                    'preload_js' => !empty($settings['preload_js']),
+                    'preload_images' => !empty($settings['preload_images']),
                 ];
             }
         }
@@ -155,6 +160,50 @@ class Menu_Manager
                        value="<?php echo esc_attr($settings['mobile_breakpoint'] ?? 768); ?>" 
                        min="0" 
                        max="2000">
+            </label>
+        </fieldset>
+        <fieldset class="mega-menu-ajax-preload-settings" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;">
+            <legend style="font-weight: 600; margin-bottom: 5px;"><?php esc_html_e('Page Preload on Hover', 'mega-menu-ajax'); ?></legend>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_enabled]" 
+                       value="1" 
+                       <?php checked(!empty($settings['preload_enabled'])); ?>>
+                <?php esc_html_e('Enable page preload on hover', 'mega-menu-ajax'); ?>
+            </label>
+            <br>
+            <label>
+                <?php esc_html_e('Preload delay (ms):', 'mega-menu-ajax'); ?>
+                <input type="number" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_delay]" 
+                       value="<?php echo esc_attr($settings['preload_delay'] ?? 30); ?>" 
+                       min="0" 
+                       max="2000"
+                       style="width: 70px;">
+            </label>
+            <br>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_css]" 
+                       value="1" 
+                       <?php checked(!empty($settings['preload_css'])); ?>>
+                <?php esc_html_e('Preload CSS assets', 'mega-menu-ajax'); ?>
+            </label>
+            <br>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_js]" 
+                       value="1" 
+                       <?php checked(!empty($settings['preload_js'])); ?>>
+                <?php esc_html_e('Preload JS assets', 'mega-menu-ajax'); ?>
+            </label>
+            <br>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_images]" 
+                       value="1" 
+                       <?php checked(!empty($settings['preload_images'])); ?>>
+                <?php esc_html_e('Preload images', 'mega-menu-ajax'); ?>
             </label>
         </fieldset>
         <?php

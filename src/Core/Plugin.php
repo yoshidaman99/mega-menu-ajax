@@ -41,6 +41,7 @@ class Plugin
         new \Mega_Menu_Ajax\Ajax\Sub_Menu_Loader();
         new \Mega_Menu_Ajax\Ajax\Menu_Lazy_Load();
         new \Mega_Menu_Ajax\Ajax\Search_Handler();
+        new \Mega_Menu_Ajax\Ajax\Page_Preload();
         
         if (did_action('elementor/loaded')) {
             new \Mega_Menu_Ajax\Elementor\Integration();
@@ -73,10 +74,26 @@ class Plugin
             true
         );
 
+        $settings = get_option('mega_menu_ajax_settings', []);
+        $preload_settings = [];
+        
+        foreach ($settings as $location => $location_settings) {
+            if (!empty($location_settings['preload_enabled'])) {
+                $preload_settings[$location] = [
+                    'enabled' => true,
+                    'delay' => absint($location_settings['preload_delay'] ?? 30),
+                    'preload_css' => !empty($location_settings['preload_css']),
+                    'preload_js' => !empty($location_settings['preload_js']),
+                    'preload_images' => !empty($location_settings['preload_images']),
+                ];
+            }
+        }
+
         wp_localize_script('mega-menu-ajax-frontend', 'megaMenuAjax', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url('mega-menu-ajax/v1/'),
             'nonce' => wp_create_nonce('mega_menu_ajax_nonce'),
+            'preload' => $preload_settings,
             'i18n' => [
                 'searchPlaceholder' => __('Search menu...', 'mega-menu-ajax'),
                 'loading' => __('Loading...', 'mega-menu-ajax'),
