@@ -98,6 +98,11 @@ class Plugin
             }
         }
 
+        $prefetch_timeout = isset($settings['prefetch_timeout']) 
+            ? absint($settings['prefetch_timeout']) 
+            : 300;
+        $prefetch_timeout = max(100, min(2000, $prefetch_timeout));
+
         wp_localize_script('mega-menu-ajax-frontend', 'megaMenuAjax', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url('mega-menu-ajax/v1/'),
@@ -107,6 +112,7 @@ class Plugin
             'ajaxSubmenuLocations' => $ajax_submenu_locations,
             'registeredLocations' => array_keys(get_registered_nav_menus()),
             'preload' => $preload_settings,
+            'prefetchTimeout' => apply_filters('mega_menu_ajax_prefetch_timeout', $prefetch_timeout),
             'i18n' => [
                 'searchPlaceholder' => __('Search menu...', 'mega-menu-ajax'),
                 'loading' => __('Loading...', 'mega-menu-ajax'),

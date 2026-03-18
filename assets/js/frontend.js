@@ -407,6 +407,8 @@
             self.preloadedUrls = {};
             self.pendingAjaxRequests = [];
             self.fetchedPages = {};
+            self.prefetchStartTimes = {};
+            self.fetchControllers = {};
 
             $(document).on('mouseenter touchstart', itemSelector + ' > a', function (e) {
                 var $link = $(this);
@@ -448,13 +450,21 @@
 
             $(document).on('mousedown', itemSelector + ' > a', function (e) {
                 var href = $(this).attr('href');
-                if (href && href !== '#' && href.indexOf('javascript:') !== 0) {
+                if (href && href !== '#' && href.indexOf('javascript:') === 0) {
                     self.aggressiveFetch(href);
                     self.nativePrerender(href);
                 }
             });
 
             $(document).on('click', itemSelector + ' > a', function (e) {
+                var href = $(this).attr('href');
+                
+                if (href && href !== '#' && href.indexOf('javascript:') !== 0) {
+                    if (self.isPrefetchStalled(href)) {
+                        self.abortFetch(href);
+                    }
+                }
+                
                 self.cancelPendingRequests();
             });
 
@@ -502,8 +512,32 @@
             }
 
             self.fetchedPages[url] = true;
+            self.prefetchStartTimes[url] = Date.now();
 
-            if ('fetch' in window) {
+            if ('AbortController' in window && 'fetch' in window) {
+                var controller = new AbortController();
+                self.fetchControllers[url] = controller;
+
+                fetch(url, {
+                    method: 'GET',
+                    credentials: 'include',
+                    mode: 'cors',
+                    cache: 'force-cache',
+                    signal: controller.signal
+                }).then(function (response) {
+                    self.log('Aggressive fetch complete:', url);
+                    delete self.fetchControllers[url];
+                    delete self.prefetchStartTimes[url];
+                }).catch(function (error) {
+                    if (error.name === 'AbortError') {
+                        self.log('Fetch aborted:', url);
+                    } else {
+                        self.log('Aggressive fetch error:', error);
+                    }
+                    delete self.fetchControllers[url];
+                    delete self.prefetchStartTimes[url];
+                });
+            } else if ('fetch' in window) {
                 fetch(url, {
                     method: 'GET',
                     credentials: 'include',
@@ -511,12 +545,36 @@
                     cache: 'force-cache'
                 }).then(function (response) {
                     self.log('Aggressive fetch complete:', url);
+                    delete self.prefetchStartTimes[url];
                 }).catch(function (error) {
                     self.log('Aggressive fetch error:', error);
+                    delete self.prefetchStartTimes[url];
                 });
             }
 
             self.log('Aggressive fetch started:', url);
+        },
+
+        isPrefetchStalled: function (url) {
+            var startTime = this.prefetchStartTimes[url];
+            if (!startTime) {
+                return false;
+            }
+            
+            var timeout = megaMenuAjax.prefetchTimeout || 300;
+            var elapsed = Date.now() - startTime;
+            
+            this.log('Prefetch elapsed:', elapsed + 'ms', '(timeout:', timeout + 'ms)');
+            
+            return elapsed > timeout;
+        },
+
+        abortFetch: function (url) {
+            if (this.fetchControllers && this.fetchControllers[url]) {
+                this.fetchControllers[url].abort();
+                delete this.fetchControllers[url];
+                this.log('Aborted stalled fetch:', url);
+            }
         },
 
         speculationPrerender: function (url) {

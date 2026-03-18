@@ -37,6 +37,21 @@ class Menu_Manager
         ]);
 
         add_settings_section(
+            'mega_menu_ajax_global',
+            __('Global Settings', 'mega-menu-ajax'),
+            [$this, 'render_global_section'],
+            'mega-menu-ajax'
+        );
+
+        add_settings_field(
+            'prefetch_timeout',
+            __('Prefetch Timeout', 'mega-menu-ajax'),
+            [$this, 'render_prefetch_timeout_field'],
+            'mega-menu-ajax',
+            'mega_menu_ajax_global'
+        );
+
+        add_settings_section(
             'mega_menu_ajax_locations',
             __('Menu Locations', 'mega-menu-ajax'),
             [$this, 'render_locations_section'],
@@ -61,8 +76,16 @@ class Menu_Manager
     {
         $sanitized = [];
         
+        $sanitized['prefetch_timeout'] = isset($input['prefetch_timeout']) 
+            ? absint($input['prefetch_timeout']) 
+            : 300;
+        $sanitized['prefetch_timeout'] = max(100, min(2000, $sanitized['prefetch_timeout']));
+        
         if (is_array($input)) {
             foreach ($input as $location => $settings) {
+                if ($location === 'prefetch_timeout') {
+                    continue;
+                }
                 $sanitized[$location] = [
                     'enabled' => !empty($settings['enabled']),
                     'ajax_submenu' => !empty($settings['ajax_submenu']),
@@ -98,6 +121,29 @@ class Menu_Manager
                 ?>
             </form>
         </div>
+        <?php
+    }
+
+    public function render_global_section()
+    {
+        echo '<p>' . esc_html__('Global performance settings for the mega menu.', 'mega-menu-ajax') . '</p>';
+    }
+
+    public function render_prefetch_timeout_field()
+    {
+        $timeout = $this->settings['prefetch_timeout'] ?? 300;
+        ?>
+        <input type="number" 
+               name="mega_menu_ajax_settings[prefetch_timeout]" 
+               value="<?php echo esc_attr($timeout); ?>" 
+               min="100" 
+               max="2000" 
+               step="50"
+               class="small-text"> 
+        <span><?php esc_html_e('ms', 'mega-menu-ajax'); ?></span>
+        <p class="description">
+            <?php esc_html_e('Abort prefetch if it takes longer than this. Lower = faster fallback navigation. Default: 300ms', 'mega-menu-ajax'); ?>
+        </p>
         <?php
     }
 
