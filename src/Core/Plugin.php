@@ -30,7 +30,7 @@ class Plugin
         add_action('init', [$this, 'load_textdomain']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
-        add_filter('wp_nav_menu_args', [$this, 'filter_nav_menu_args'], 9999);
+        add_filter('wp_nav_menu_args', [$this, 'filter_nav_menu_args'], 100);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
     }
 
@@ -93,11 +93,13 @@ class Plugin
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url('mega-menu-ajax/v1/'),
             'nonce' => wp_create_nonce('mega_menu_ajax_nonce'),
+            'debug' => defined('WP_DEBUG') && WP_DEBUG,
             'preload' => $preload_settings,
             'i18n' => [
                 'searchPlaceholder' => __('Search menu...', 'mega-menu-ajax'),
                 'loading' => __('Loading...', 'mega-menu-ajax'),
                 'noResults' => __('No results found', 'mega-menu-ajax'),
+                'menu' => __('Menu', 'mega-menu-ajax'),
             ],
         ]);
     }

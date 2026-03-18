@@ -37,11 +37,17 @@ class Sub_Menu_Loader
         }
         
         $items = [];
-        $menu_items = wp_get_nav_menu_items(get_the_ID(), ['post_parent' => $parent_id]);
+        $menu_id = self::get_menu_id_from_item($parent_id);
+        
+        if (!$menu_id) {
+            return $items;
+        }
+        
+        $menu_items = wp_get_nav_menu_items($menu_id);
         
         if (!empty($menu_items)) {
             foreach ($menu_items as $item) {
-                if ($item->menu_item_parent == $parent_id) {
+                if ((int) $item->menu_item_parent === (int) $parent_id) {
                     $items[] = [
                         'id' => $item->ID,
                         'title' => $item->title,
@@ -49,7 +55,7 @@ class Sub_Menu_Loader
                         'attr_title' => $item->attr_title,
                         'target' => $item->target,
                         'classes' => $item->classes,
-                        'has_children' => self::has_children($item->ID),
+                        'has_children' => self::has_children($item->ID, $menu_items),
                     ];
                 }
             }
@@ -60,15 +66,46 @@ class Sub_Menu_Loader
         return $items;
     }
 
-    private static function has_children($item_id)
+    private static function get_menu_id_from_item($item_id)
     {
-        $children = get_posts([
-            'post_type' => 'nav_menu_item',
-            'post_parent' => $item_id,
-            'posts_per_page' => 1,
-            'fields' => 'ids',
-        ]);
+        $item = get_post($item_id);
         
-        return !empty($children);
+        if (!$item || $item->post_type !== 'nav_menu_item') {
+            return 0;
+        }
+        
+        $term_id = get_post_meta($item_id, '_menu_item_menu_item_parent', true);
+        
+        $menus = wp_get_object_terms($item_id, 'nav_menu');
+        
+        if (!empty($menus) && !is_wp_error($menus)) {
+            return $menus[0]->term_id;
+        }
+        
+        return 0;
+    }
+
+    private static function has_children($item_id, $all_items = null)
+    {
+        if ($all_items === null) {
+            $args = [
+                'meta_key' => '_menu_item_menu_item_parent',
+                'meta_value' => $item_id,
+                'post_type' => 'nav_menu_item',
+                'posts_per_page' => 1,
+                'fields' => 'ids',
+                'suppress_filters' => false,
+            ];
+            $children = get_posts($args);
+            return !empty($children);
+        }
+        
+        foreach ($all_items as $item) {
+            if ((int) $item->menu_item_parent === (int) $item_id) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

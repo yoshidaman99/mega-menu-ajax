@@ -7,19 +7,24 @@ defined('ABSPATH') || exit;
 class Walker extends \Walker_Nav_Menu
 {
     private $ajax_enabled = false;
+    private $location_settings = [];
+    private $current_depth = 0;
 
     public function start_lvl(&$output, $depth = 0, $args = null)
     {
+        $this->current_depth = $depth + 1;
+        
         $classes = ['mega-menu-ajax-submenu', 'mega-menu-ajax-depth-' . ($depth + 1)];
         
         $location = $args->theme_location ?? '';
         $settings = get_option('mega_menu_ajax_settings', []);
-        $location_settings = $settings[$location] ?? [];
-        
-        $this->ajax_enabled = !empty($location_settings['ajax_submenu']);
+        $this->location_settings = $settings[$location] ?? [];
+        $this->ajax_enabled = !empty($this->location_settings['ajax_submenu']);
         
         if ($this->ajax_enabled && $depth === 0) {
             $classes[] = 'mega-menu-ajax-lazy';
+            $output .= '<ul class="' . esc_attr(implode(' ', $classes)) . '" data-loaded="false"></ul>';
+            return;
         }
         
         $output .= '<ul class="' . esc_attr(implode(' ', $classes)) . '">';
@@ -27,11 +32,21 @@ class Walker extends \Walker_Nav_Menu
 
     public function end_lvl(&$output, $depth = 0, $args = null)
     {
+        $this->current_depth = $depth;
+        
+        if ($this->ajax_enabled && $depth === 0) {
+            return;
+        }
+        
         $output .= '</ul>';
     }
 
     public function start_el(&$output, $item, $depth = 0, $args = null, $id = 0)
     {
+        if ($this->ajax_enabled && $depth > 0) {
+            return;
+        }
+        
         $classes = empty($item->classes) ? [] : (array) $item->classes;
         $classes[] = 'mega-menu-ajax-item';
         $classes[] = 'menu-item-' . $item->ID;
@@ -90,6 +105,10 @@ class Walker extends \Walker_Nav_Menu
 
     public function end_el(&$output, $item, $depth = 0, $args = null)
     {
+        if ($this->ajax_enabled && $depth > 0) {
+            return;
+        }
+        
         $output .= '</li>';
     }
 }

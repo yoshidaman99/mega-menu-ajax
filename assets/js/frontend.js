@@ -5,12 +5,31 @@
     'use strict';
 
     var MegaMenuAjax = {
+        debug: false,
+
+        log: function () {
+            if (this.debug && console && console.log) {
+                console.log.apply(console, ['[MegaMenuAjax]'].concat(Array.prototype.slice.call(arguments)));
+            }
+        },
+
         init: function () {
+            this.debug = typeof megaMenuAjax !== 'undefined' && megaMenuAjax.debug;
+            
+            this.log('Initializing...', megaMenuAjax);
+            
+            if (typeof megaMenuAjax === 'undefined') {
+                console.error('[MegaMenuAjax] Configuration not found. Plugin may not be properly loaded.');
+                return;
+            }
+            
             this.bindEvents();
             this.initMobileToggle();
             this.initLazyLoad();
             this.initSearch();
             this.initPreload();
+            
+            this.log('Initialized successfully');
         },
 
         bindEvents: function () {
@@ -19,6 +38,8 @@
             $(document).on('mouseenter', '.mega-menu-ajax-item.mega-menu-ajax-has-children', function (e) {
                 var $item = $(this);
                 var $submenu = $item.children('.mega-menu-ajax-submenu');
+
+                self.log('Hover on item', $item.data('menu-item-id'), 'lazy:', $submenu.hasClass('mega-menu-ajax-lazy'), 'loaded:', $submenu.data('loaded'));
 
                 if ($submenu.hasClass('mega-menu-ajax-lazy') && !$submenu.data('loaded')) {
                     self.loadSubmenu($item, $submenu);
@@ -40,15 +61,22 @@
         },
 
         loadSubmenu: function ($item, $submenu) {
-            var itemId = $item.data('menu-item-id') || $item.attr('class').match(/menu-item-(\d+)/);
+            var self = this;
+            var itemId = $item.data('menu-item-id');
 
-            if (Array.isArray(itemId)) {
-                itemId = itemId[1];
+            if (!itemId) {
+                var classMatch = $item.attr('class').match(/menu-item-(\d+)/);
+                if (classMatch) {
+                    itemId = classMatch[1];
+                }
             }
 
             if (!itemId) {
+                self.log('No item ID found for submenu load');
                 return;
             }
+
+            self.log('Loading submenu for item:', itemId);
 
             $submenu.data('loaded', true);
             $submenu.append('<div class="mega-menu-ajax-loading"><span class="mega-menu-ajax-spinner"></span></div>');
@@ -62,15 +90,23 @@
                     nonce: megaMenuAjax.nonce
                 },
                 success: function (response) {
-                    if (response.success && response.data) {
+                    self.log('Submenu response:', response);
+                    if (response.success && response.data && response.data.length) {
                         var html = MegaMenuAjax.renderSubmenuItems(response.data);
                         $submenu.find('.mega-menu-ajax-loading').remove();
                         $submenu.append(html);
+                        $submenu.attr('data-loaded', 'true');
+                        self.log('Submenu loaded with', response.data.length, 'items');
+                    } else {
+                        $submenu.find('.mega-menu-ajax-loading').remove();
+                        $submenu.data('loaded', false);
+                        self.log('No submenu items returned or empty response');
                     }
                 },
-                error: function () {
+                error: function (xhr, status, error) {
                     $submenu.find('.mega-menu-ajax-loading').remove();
                     $submenu.data('loaded', false);
+                    self.log('Submenu load error:', status, error);
                 }
             });
         },
@@ -82,6 +118,12 @@
                 html += '<li class="mega-menu-ajax-item';
                 if (item.has_children) {
                     html += ' mega-menu-ajax-has-children';
+                }
+                if (item.classes && item.classes.length) {
+                    var classes = item.classes.filter(function(c) { return c && c !== ''; });
+                    if (classes.length) {
+                        html += ' ' + classes.join(' ');
+                    }
                 }
                 html += '" data-menu-item-id="' + item.id + '">';
                 html += '<a href="' + item.url + '"';
@@ -162,7 +204,7 @@
 
         renderMenu: function (items, location) {
             var html = '<div class="mega-menu-ajax-wrap" data-location="' + location + '">';
-            html += '<button class="mega-menu-ajax-toggle" aria-label="' + megaMenuAjax.i18n.menu + '">';
+            html += '<button class="mega-menu-ajax-toggle" aria-label="' + (megaMenuAjax.i18n.menu || 'Menu') + '">';
             html += '<span class="mega-menu-ajax-toggle-icon"></span>';
             html += '</button>';
             html += '<ul class="mega-menu-ajax-menu">';
