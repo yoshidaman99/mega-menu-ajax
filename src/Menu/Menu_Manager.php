@@ -98,6 +98,12 @@ class Menu_Manager
                     'preload_css' => !empty($settings['preload_css']),
                     'preload_js' => !empty($settings['preload_js']),
                     'preload_images' => !empty($settings['preload_images']),
+                    'background_preload_enabled' => !empty($settings['background_preload_enabled']),
+                    'background_preload_limit' => absint($settings['background_preload_limit'] ?? 5),
+                    'background_preload_delay' => absint($settings['background_preload_delay'] ?? 2000),
+                    'background_preload_priority' => sanitize_text_field($settings['background_preload_priority'] ?? 'balanced'),
+                    'background_preload_on_wifi_only' => !empty($settings['background_preload_on_wifi_only']),
+                    'background_preload_when_idle_only' => !empty($settings['background_preload_when_idle_only']),
                 ];
             }
         }
@@ -250,6 +256,64 @@ class Menu_Manager
                        value="1" 
                        <?php checked(!empty($settings['preload_images'])); ?>>
                 <?php esc_html_e('Preload images', 'mega-menu-ajax'); ?>
+            </label>
+        </fieldset>
+        <fieldset class="mega-menu-ajax-background-preload-settings">
+            <h4 style="margin: 15px 0 10px; font-weight: 600;"><?php esc_html_e('Background Preloading', 'mega-menu-ajax'); ?></h4>
+            <p class="description" style="margin-bottom: 10px;">
+                <?php esc_html_e('Preload pages in the background when the network is idle.', 'mega-menu-ajax'); ?>
+            </p>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][background_preload_enabled]" 
+                       value="1" 
+                       <?php checked(!empty($settings['background_preload_enabled'])); ?>>
+                <?php esc_html_e('Enable background preloading', 'mega-menu-ajax'); ?>
+            </label>
+            <br>
+            <label>
+                <?php esc_html_e('Concurrent preload limit:', 'mega-menu-ajax'); ?>
+                <input type="number" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][background_preload_limit]" 
+                       value="<?php echo esc_attr($settings['background_preload_limit'] ?? 5); ?>" 
+                       min="1" 
+                       max="10"
+                       class="small-text">
+            </label>
+            <br>
+            <label>
+                <?php esc_html_e('Idle delay (ms):', 'mega-menu-ajax'); ?>
+                <input type="number" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][background_preload_delay]" 
+                       value="<?php echo esc_attr($settings['background_preload_delay'] ?? 2000); ?>" 
+                       min="500" 
+                       max="10000"
+                       class="small-text">
+            </label>
+            <br>
+            <label>
+                <?php esc_html_e('Preload priority:', 'mega-menu-ajax'); ?>
+                <select name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][background_preload_priority]">
+                    <option value="conservative" <?php selected($settings['background_preload_priority'] ?? '', 'conservative'); ?>><?php esc_html_e('Conservative (low data usage)', 'mega-menu-ajax'); ?></option>
+                    <option value="balanced" <?php selected($settings['background_preload_priority'] ?? '', 'balanced'); ?>><?php esc_html_e('Balanced', 'mega-menu-ajax'); ?></option>
+                    <option value="aggressive" <?php selected($settings['background_preload_priority'] ?? '', 'aggressive'); ?>><?php esc_html_e('Aggressive (better performance)', 'mega-menu-ajax'); ?></option>
+                </select>
+            </label>
+            <br>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][background_preload_on_wifi_only]" 
+                       value="1" 
+                       <?php checked(!empty($settings['background_preload_on_wifi_only'])); ?>>
+                <?php esc_html_e('Only preload on fast connections', 'mega-menu-ajax'); ?>
+            </label>
+            <br>
+            <label>
+                <input type="checkbox" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][background_preload_when_idle_only]" 
+                       value="1" 
+                       <?php checked(!empty($settings['background_preload_when_idle_only'])); ?>>
+                <?php esc_html_e('Only preload when network is idle', 'mega-menu-ajax'); ?>
             </label>
         </fieldset>
         <?php

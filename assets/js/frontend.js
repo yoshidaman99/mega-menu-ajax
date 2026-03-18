@@ -41,6 +41,7 @@
             this.initLazyLoad();
             this.initSearch();
             this.initPreload();
+            this.initBackgroundPreload();
             this.markLazySubmenus();
             
             this.log('Initialized successfully');
@@ -759,6 +760,329 @@
                 selector += ', script[src="' + url + '"]';
             }
             return document.querySelector(selector) !== null;
+        },
+
+        initBackgroundPreload: function () {
+            var self = this;
+            
+            if (!megaMenuAjax.backgroundPreload || Object.keys(megaMenuAjax.backgroundPreload).length === 0) {
+                this.log('Background preloading not enabled');
+                return;
+            }
+            
+            this.BackgroundPreloadManager = {
+                init: function () {
+                    self.log('BackgroundPreloadManager: Initializing...');
+                    
+                    this.isIdle = false;
+                    this.isNetworkIdle = false;
+                    this.isActive = false;
+                    this.preloadQueue = [];
+                    this.activePreloads = 0;
+                    this.pendingUrls = new Set();
+                    this.networkInfo = null;
+                    this.lastActivityTime = Date.now();
+                    this.activityTimeout = null;
+                    this.networkIdleInterval = null;
+                    this.visibilityObserver = null;
+                    this.idleCheckDelay = 2000;
+                    
+                    this.detectNetworkCapabilities();
+                    this.initIdleDetection();
+                    this.initVisibilityObserver();
+                    this.bindEvents();
+                    this.loadPreloadUrls();
+                    
+                    self.log('BackgroundPreloadManager: Initialized');
+                },
+                
+                detectNetworkCapabilities: function () {
+                    if ('connection' in navigator) {
+                        this.networkInfo = navigator.connection;
+                        self.log('BackgroundPreloadManager: Network info detected', this.networkInfo.effectiveType);
+                    }
+                },
+                
+                initIdleDetection: function () {
+                    var manager = this;
+                    
+                    var activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+                    activityEvents.forEach(function (event) {
+                        document.addEventListener(event, function () {
+                            manager.lastActivityTime = Date.now();
+                            if (manager.isActive === false) {
+                                manager.isActive = true;
+                                manager.pausePreloading();
+                            }
+                            
+                            clearTimeout(manager.activityTimeout);
+                            manager.activityTimeout = setTimeout(function () {
+                                manager.isActive = false;
+                                manager.maybeResumePreloading();
+                            }, 1000);
+                        }, { passive: true });
+                    });
+                    
+                    this.checkNetworkIdle();
+                    this.networkIdleInterval = setInterval(function () {
+                        manager.checkNetworkIdle();
+                    }, 1000);
+                },
+                
+                checkNetworkIdle: function () {
+                    var wasIdle = this.isNetworkIdle;
+                    
+                    this.isNetworkIdle = (Date.now() - this.lastActivityTime > 1000) && !this.isActive;
+                    
+                    if (wasIdle !== this.isNetworkIdle) {
+                        self.log('BackgroundPreloadManager: Network idle state:', this.isNetworkIdle);
+                        
+                        if (this.isNetworkIdle) {
+                            this.maybeResumePreloading();
+                        } else {
+                            this.pausePreloading();
+                        }
+                    }
+                },
+                
+                initVisibilityObserver: function () {
+                    var manager = this;
+                    var menuWraps = document.querySelectorAll('.mega-menu-ajax-wrap, .mega-menu-wrap');
+                    
+                    if (!menuWraps.length) {
+                        return;
+                    }
+                    
+                    this.visibilityObserver = new IntersectionObserver(function (entries) {
+                        entries.forEach(function (entry) {
+                            if (entry.isIntersecting) {
+                                var location = entry.target.dataset.location;
+                                if (location && megaMenuAjax.backgroundPreload[location]) {
+                                    self.log('BackgroundPreloadManager: Menu visible:', location);
+                                    manager.maybeStartPreloading(location);
+                                }
+                            }
+                        });
+                    }, { rootMargin: '200px' });
+                    
+                    menuWraps.forEach(function (wrap) {
+                        manager.visibilityObserver.observe(wrap);
+                    });
+                },
+                
+                maybeStartPreloading: function (location) {
+                    if (!this.shouldPreload(location)) {
+                        return;
+                    }
+                    
+                    self.log('BackgroundPreloadManager: Starting for location:', location);
+                    
+                    var manager = this;
+                    $.ajax({
+                        url: megaMenuAjax.ajaxUrl,
+                        type: 'POST',
+                        data: {
+                            action: 'mega_menu_ajax_background_preload_urls',
+                            location: location,
+                            nonce: megaMenuAjax.nonce
+                        },
+                        success: function (response) {
+                            if (response.success && response.data && response.data.length) {
+                                manager.enqueueUrls(response.data, location);
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            self.log('BackgroundPreloadManager: Error fetching URLs:', status, error);
+                        }
+                    });
+                },
+                
+                shouldPreload: function (location) {
+                    var settings = megaMenuAjax.backgroundPreload[location];
+                    
+                    if (settings.wifiOnly && this.networkInfo) {
+                        var effectiveType = this.networkInfo.effectiveType || '';
+                        if (effectiveType !== '4g' && this.networkInfo.downlink < 2) {
+                            self.log('BackgroundPreloadManager: Skipping - slow connection');
+                            return false;
+                        }
+                    }
+                    
+                    if (settings.idleOnly && !this.isNetworkIdle) {
+                        self.log('BackgroundPreloadManager: Skipping - network not idle');
+                        return false;
+                    }
+                    
+                    return true;
+                },
+                
+                enqueueUrls: function (urls, location) {
+                    var manager = this;
+                    var settings = megaMenuAjax.backgroundPreload[location];
+                    
+                    urls.forEach(function (urlData) {
+                        if (manager.pendingUrls.has(urlData.url)) {
+                            return;
+                        }
+                        
+                        if (manager.isAlreadyPreloaded(urlData.url)) {
+                            return;
+                        }
+                        
+                        manager.pendingUrls.add(urlData.url);
+                        manager.preloadQueue.push({
+                            url: urlData.url,
+                            title: urlData.title,
+                            location: location,
+                            priority: urlData.priority || 10,
+                            settings: settings
+                        });
+                    });
+                    
+                    manager.preloadQueue.sort(function (a, b) {
+                        return b.priority - a.priority;
+                    });
+                    
+                    self.log('BackgroundPreloadManager: Enqueued', urls.length, 'URLs');
+                    
+                    if (manager.isNetworkIdle) {
+                        manager.processQueue();
+                    }
+                },
+                
+                isAlreadyPreloaded: function (url) {
+                    var selectors = [
+                        'link[rel="prefetch"][href="' + url + '"]',
+                        'link[rel="preload"][href="' + url + '"]',
+                        'link[rel="prerender"][href="' + url + '"]'
+                    ];
+                    
+                    return document.querySelector(selectors.join(', ')) !== null;
+                },
+                
+                processQueue: function () {
+                    var manager = this;
+                    
+                    if (!this.isNetworkIdle || this.isActive || this.preloadQueue.length === 0) {
+                        return;
+                    }
+                    
+                    var settings = this.preloadQueue[0] ? this.preloadQueue[0].settings : null;
+                    if (!settings) {
+                        return;
+                    }
+                    
+                    var maxConcurrent = Math.min(settings.limit, 3);
+                    
+                    if (this.activePreloads >= maxConcurrent) {
+                        return;
+                    }
+                    
+                    var nextUrl = this.preloadQueue.shift();
+                    if (!nextUrl) {
+                        return;
+                    }
+                    
+                    this.activePreloads++;
+                    self.log('BackgroundPreloadManager: Preloading:', nextUrl.url, '(Active:', this.activePreloads + ')');
+                    
+                    if ('requestIdleCallback' in window) {
+                        requestIdleCallback(function () {
+                            manager.preloadUrl(nextUrl);
+                        }, { timeout: 2000 });
+                    } else {
+                        setTimeout(function () {
+                            manager.preloadUrl(nextUrl);
+                        }, 0);
+                    }
+                    
+                    setTimeout(function () {
+                        manager.processQueue();
+                    }, 300);
+                },
+                
+                preloadUrl: function (urlData) {
+                    var manager = this;
+                    var url = urlData.url;
+                    
+                    var link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = url;
+                    link.fetchPriority = 'low';
+                    link.as = 'document';
+                    
+                    link.onload = function () {
+                        self.log('BackgroundPreloadManager: Preloaded:', url);
+                        manager.activePreloads--;
+                        manager.pendingUrls.delete(url);
+                        manager.processQueue();
+                    };
+                    
+                    link.onerror = function () {
+                        self.log('BackgroundPreloadManager: Preload error:', url);
+                        manager.activePreloads--;
+                        manager.pendingUrls.delete(url);
+                        manager.processQueue();
+                    };
+                    
+                    document.head.appendChild(link);
+                },
+                
+                maybeResumePreloading: function () {
+                    var manager = this;
+                    
+                    if (!this.isNetworkIdle) {
+                        return;
+                    }
+                    
+                    self.log('BackgroundPreloadManager: Resuming');
+                    
+                    setTimeout(function () {
+                        manager.processQueue();
+                    }, 500);
+                },
+                
+                pausePreloading: function () {
+                    self.log('BackgroundPreloadManager: Paused');
+                },
+                
+                loadPreloadUrls: function () {
+                    var manager = this;
+                    var menuWraps = document.querySelectorAll('.mega-menu-ajax-wrap, .mega-menu-wrap');
+                    
+                    menuWraps.forEach(function (wrap) {
+                        var location = wrap.dataset.location;
+                        if (location && megaMenuAjax.backgroundPreload[location]) {
+                            setTimeout(function () {
+                                manager.maybeStartPreloading(location);
+                            }, manager.idleCheckDelay);
+                        }
+                    });
+                },
+                
+                bindEvents: function () {
+                    var manager = this;
+                    
+                    document.addEventListener('visibilitychange', function () {
+                        if (document.hidden) {
+                            manager.pausePreloading();
+                        } else {
+                            manager.maybeResumePreloading();
+                        }
+                    });
+                    
+                    window.addEventListener('beforeunload', function () {
+                        if (manager.networkIdleInterval) {
+                            clearInterval(manager.networkIdleInterval);
+                        }
+                        if (manager.visibilityObserver) {
+                            manager.visibilityObserver.disconnect();
+                        }
+                    });
+                }
+            };
+            
+            this.BackgroundPreloadManager.init();
         }
     };
 

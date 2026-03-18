@@ -43,6 +43,7 @@ class Plugin
         new \Mega_Menu_Ajax\Ajax\Menu_Lazy_Load();
         new \Mega_Menu_Ajax\Ajax\Search_Handler();
         new \Mega_Menu_Ajax\Ajax\Page_Preload();
+        new \Mega_Menu_Ajax\Ajax\Background_Preload();
         
         if (did_action('elementor/loaded')) {
             new \Mega_Menu_Ajax\Elementor\Integration();
@@ -77,6 +78,7 @@ class Plugin
 
         $settings = get_option('mega_menu_ajax_settings', []);
         $preload_settings = [];
+        $background_preload_settings = [];
         $enabled_locations = [];
         $ajax_submenu_locations = [];
         
@@ -96,6 +98,16 @@ class Plugin
                     'preload_images' => !empty($location_settings['preload_images']),
                 ];
             }
+            if (!empty($location_settings['background_preload_enabled'])) {
+                $background_preload_settings[$location] = [
+                    'enabled' => true,
+                    'limit' => absint($location_settings['background_preload_limit'] ?? 5),
+                    'delay' => absint($location_settings['background_preload_delay'] ?? 2000),
+                    'priority' => sanitize_text_field($location_settings['background_preload_priority'] ?? 'balanced'),
+                    'wifiOnly' => !empty($location_settings['background_preload_on_wifi_only']),
+                    'idleOnly' => !empty($location_settings['background_preload_when_idle_only']),
+                ];
+            }
         }
 
         $prefetch_timeout = isset($settings['prefetch_timeout']) 
@@ -112,6 +124,7 @@ class Plugin
             'ajaxSubmenuLocations' => $ajax_submenu_locations,
             'registeredLocations' => array_keys(get_registered_nav_menus()),
             'preload' => $preload_settings,
+            'backgroundPreload' => $background_preload_settings,
             'prefetchTimeout' => apply_filters('mega_menu_ajax_prefetch_timeout', $prefetch_timeout),
             'i18n' => [
                 'searchPlaceholder' => __('Search menu...', 'mega-menu-ajax'),
