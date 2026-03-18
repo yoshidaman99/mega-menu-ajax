@@ -23,6 +23,11 @@
                 return;
             }
             
+            this.log('Enabled locations:', megaMenuAjax.enabledLocations);
+            this.log('Registered locations:', megaMenuAjax.registeredLocations);
+            this.log('Menu items found:', document.querySelectorAll('.mega-menu-ajax-item').length);
+            this.log('Menu wraps found:', document.querySelectorAll('.mega-menu-ajax-wrap').length);
+            
             this.bindEvents();
             this.initMobileToggle();
             this.initLazyLoad();

@@ -76,8 +76,12 @@ class Plugin
 
         $settings = get_option('mega_menu_ajax_settings', []);
         $preload_settings = [];
+        $enabled_locations = [];
         
         foreach ($settings as $location => $location_settings) {
+            if (!empty($location_settings['enabled'])) {
+                $enabled_locations[] = $location;
+            }
             if (!empty($location_settings['preload_enabled'])) {
                 $preload_settings[$location] = [
                     'enabled' => true,
@@ -94,6 +98,8 @@ class Plugin
             'restUrl' => rest_url('mega-menu-ajax/v1/'),
             'nonce' => wp_create_nonce('mega_menu_ajax_nonce'),
             'debug' => defined('WP_DEBUG') && WP_DEBUG,
+            'enabledLocations' => $enabled_locations,
+            'registeredLocations' => array_keys(get_registered_nav_menus()),
             'preload' => $preload_settings,
             'i18n' => [
                 'searchPlaceholder' => __('Search menu...', 'mega-menu-ajax'),
@@ -134,7 +140,33 @@ class Plugin
     public function filter_nav_menu_args($args)
     {
         $settings = get_option('mega_menu_ajax_settings', []);
+        
+        if (empty($settings)) {
+            return $args;
+        }
+
         $location = $args['theme_location'] ?? '';
+        
+        if (empty($location)) {
+            if (!empty($args['menu']) && is_object($args['menu'])) {
+                $location = $args['menu']->slug ?? '';
+            } elseif (!empty($args['menu']) && is_string($args['menu'])) {
+                $location = $args['menu'];
+            }
+        }
+
+        if (empty($location)) {
+            $locations = get_nav_menu_locations();
+            if (!empty($args['menu'])) {
+                $menu_id = is_object($args['menu']) ? $args['menu']->term_id : $args['menu'];
+                foreach ($locations as $loc => $id) {
+                    if ($id == $menu_id) {
+                        $location = $loc;
+                        break;
+                    }
+                }
+            }
+        }
 
         if (empty($location) || empty($settings[$location]['enabled'])) {
             return $args;
@@ -142,7 +174,7 @@ class Plugin
 
         $args['walker'] = new \Mega_Menu_Ajax\Menu\Walker();
         $args['menu_class'] = 'mega-menu-ajax-menu ' . ($args['menu_class'] ?? '');
-        $args['container_class'] = 'mega-menu-ajax-wrap ' . ($args['container_class'] ?? '');
+        $args['container_class'] = trim('mega-menu-ajax-wrap mega-menu-ajax-wrap-' . esc_attr($location) . ' ' . ($args['container_class'] ?? ''));
 
         return $args;
     }
