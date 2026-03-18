@@ -40,6 +40,23 @@
         bindEvents: function () {
             var self = this;
 
+            $(document).on('mouseenter', '.mega-menu-ajax-item', function (e) {
+                var $item = $(this);
+                var $link = $item.children('a');
+                var $parent = $item.parents('.mega-menu-ajax-item').first();
+                var url = $link.attr('href');
+                var title = $link.text().trim();
+                var depth = $item.parents('.mega-menu-ajax-submenu').length;
+                var isSubmenu = depth > 0;
+                
+                if (isSubmenu) {
+                    var parentTitle = $parent.children('a').text().trim();
+                    self.log('HOVER on SUBMENU item:', title, '| URL:', url, '| Parent:', parentTitle, '| Depth:', depth);
+                } else {
+                    self.log('HOVER on TOP-LEVEL menu item:', title, '| URL:', url);
+                }
+            });
+
             $(document).on('mouseenter', '.mega-menu-ajax-item.mega-menu-ajax-has-children', function (e) {
                 var $item = $(this);
                 var $submenu = $item.children('.mega-menu-ajax-submenu');
