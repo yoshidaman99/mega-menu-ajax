@@ -406,8 +406,9 @@
             self.preloadTimers = {};
             self.preloadedUrls = {};
             self.pendingAjaxRequests = [];
+            self.fetchedPages = {};
 
-            $(document).on('mouseenter', itemSelector + ' > a', function (e) {
+            $(document).on('mouseenter touchstart', itemSelector + ' > a', function (e) {
                 var $link = $(this);
                 var href = $link.attr('href');
 
@@ -415,7 +416,21 @@
                     return;
                 }
 
+                self.preconnectUrl(href);
                 self.nativePrefetch(href);
+
+                self.prerenderTimers = self.prerenderTimers || {};
+                var timerKey = href.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                if (self.prerenderTimers[timerKey]) {
+                    clearTimeout(self.prerenderTimers[timerKey]);
+                }
+
+                self.prerenderTimers[timerKey] = setTimeout(function () {
+                    self.aggressiveFetch(href);
+                    self.nativePrerender(href);
+                    self.speculationPrerender(href);
+                }, 65);
 
                 var $item = $link.parent();
                 var $wrap = $item.closest('.mega-menu-wrap, .mega-menu-ajax-wrap');
@@ -424,17 +439,17 @@
                 if (location && megaMenuAjax.preload && megaMenuAjax.preload[location]) {
                     var itemId = self.getItemId($item);
                     var settings = megaMenuAjax.preload[location];
-                    var delay = settings.delay || 50;
 
                     self.preloadTimers[itemId] = setTimeout(function () {
                         self.preloadPage($item, href, itemId, settings);
-                    }, delay);
+                    }, 100);
                 }
             });
 
             $(document).on('mousedown', itemSelector + ' > a', function (e) {
                 var href = $(this).attr('href');
                 if (href && href !== '#' && href.indexOf('javascript:') !== 0) {
+                    self.aggressiveFetch(href);
                     self.nativePrerender(href);
                 }
             });
@@ -454,6 +469,88 @@
             });
         },
 
+        preconnectUrl: function (url) {
+            try {
+                var urlObj = new URL(url);
+                var origin = urlObj.origin;
+                
+                if (this.prefetchedUrls['preconnect:' + origin]) {
+                    return;
+                }
+                this.prefetchedUrls['preconnect:' + origin] = true;
+
+                var link = document.createElement('link');
+                link.rel = 'preconnect';
+                link.href = origin;
+                document.head.appendChild(link);
+
+                var dnsLink = document.createElement('link');
+                dnsLink.rel = 'dns-prefetch';
+                dnsLink.href = origin;
+                document.head.appendChild(dnsLink);
+
+                this.log('Preconnect:', origin);
+            } catch (e) {
+            }
+        },
+
+        aggressiveFetch: function (url) {
+            var self = this;
+
+            if (self.fetchedPages[url]) {
+                return;
+            }
+
+            self.fetchedPages[url] = true;
+
+            if ('fetch' in window) {
+                fetch(url, {
+                    method: 'GET',
+                    credentials: 'include',
+                    mode: 'cors',
+                    cache: 'force-cache'
+                }).then(function (response) {
+                    self.log('Aggressive fetch complete:', url);
+                }).catch(function (error) {
+                    self.log('Aggressive fetch error:', error);
+                });
+            }
+
+            self.log('Aggressive fetch started:', url);
+        },
+
+        speculationPrerender: function (url) {
+            if (!HTMLScriptElement.supports || !HTMLScriptElement.supports('speculationrules')) {
+                return;
+            }
+
+            var existing = document.querySelector('script[type="speculationrules"]');
+            if (existing) {
+                try {
+                    var rules = JSON.parse(existing.textContent);
+                    if (rules.prerender && rules.prerender.findIndex(function(r) { return r.urls && r.urls.indexOf(url) !== -1; }) !== -1) {
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            var oldScripts = document.querySelectorAll('script[type="speculationrules"]');
+            oldScripts.forEach(function (el) {
+                el.parentNode.removeChild(el);
+            });
+
+            var script = document.createElement('script');
+            script.type = 'speculationrules';
+            script.textContent = JSON.stringify({
+                prerender: [{
+                    urls: [url]
+                }]
+            });
+
+            document.head.appendChild(script);
+            this.log('Speculation rules prerender:', url);
+        },
+
         nativePrefetch: function (url) {
             if (this.prefetchedUrls[url]) {
                 return;
@@ -465,14 +562,9 @@
             link.rel = 'prefetch';
             link.href = url;
             link.as = 'document';
-            link.onload = function () {
-                MegaMenuAjax.log('Native prefetch complete:', url);
-            };
-            link.onerror = function () {
-                MegaMenuAjax.log('Native prefetch failed:', url);
-            };
-
+            link.fetchPriority = 'high';
             document.head.appendChild(link);
+
             this.log('Native prefetch started:', url);
         },
 
@@ -483,11 +575,6 @@
 
             this.prerenderedUrls[url] = true;
 
-            var existing = document.querySelector('link[rel="prerender"][href="' + url + '"]');
-            if (existing) {
-                return;
-            }
-
             var oldPrerenders = document.querySelectorAll('link[rel="prerender"]');
             oldPrerenders.forEach(function (el) {
                 el.parentNode.removeChild(el);
@@ -496,8 +583,8 @@
             var link = document.createElement('link');
             link.rel = 'prerender';
             link.href = url;
-
             document.head.appendChild(link);
+
             this.log('Native prerender started:', url);
         },
 
@@ -507,6 +594,13 @@
             for (var key in self.preloadTimers) {
                 clearTimeout(self.preloadTimers[key]);
                 delete self.preloadTimers[key];
+            }
+
+            if (self.prerenderTimers) {
+                for (var key in self.prerenderTimers) {
+                    clearTimeout(self.prerenderTimers[key]);
+                    delete self.prerenderTimers[key];
+                }
             }
 
             self.pendingAjaxRequests.forEach(function (xhr) {
