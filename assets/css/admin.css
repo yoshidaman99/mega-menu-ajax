@@ -1,0 +1,85 @@
+/**
+ * Mega Menu Ajax - Admin Styles
+ */
+
+.mma-settings-fieldset {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.mma-settings-fieldset label {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.mma-settings-fieldset input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.mma-settings-fieldset select,
+.mma-settings-fieldset input[type="number"] {
+    margin-left: 0.5rem;
+}
+
+.mma-location-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.mma-location-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.mma-location-card-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.mma-location-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.mma-field-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.mma-field-group label {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.mma-field-group input,
+.mma-field-group select {
+    width: 100%;
+}
+
+.mma-notice {
+    background: #fff;
+    border-left: 4px solid #46b450;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.mma-notice.mma-notice-warning {
+    border-left-color: #ffb900;
+}
+
+.mma-notice.mma-notice-error {
+    border-left-color: #dc3232;
+}
