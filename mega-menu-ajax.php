@@ -4,7 +4,7 @@
  * Plugin URI:  https://github.com/yoshidaman99/mega-menu-ajax
  * Description: A fast, AJAX-powered mega menu plugin with Elementor integration, lazy loading, and real-time search.
  * Version:     1.0.0
- * Author:      yoshidaman99
+ * Author:      Jerel Yoshida
  * Author URI:  https://github.com/yoshidaman99
  * License:     GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt

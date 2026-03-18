@@ -6,6 +6,8 @@ defined('ABSPATH') || exit;
 
 class Walker extends \Walker_Nav_Menu
 {
+    private $ajax_enabled = false;
+
     public function start_lvl(&$output, $depth = 0, $args = null)
     {
         $classes = ['mega-menu-ajax-submenu', 'mega-menu-ajax-depth-' . ($depth + 1)];
@@ -14,7 +16,9 @@ class Walker extends \Walker_Nav_Menu
         $settings = get_option('mega_menu_ajax_settings', []);
         $location_settings = $settings[$location] ?? [];
         
-        if (!empty($location_settings['ajax_submenu'])) {
+        $this->ajax_enabled = !empty($location_settings['ajax_submenu']);
+        
+        if ($this->ajax_enabled && $depth === 0) {
             $classes[] = 'mega-menu-ajax-lazy';
         }
         
@@ -32,14 +36,18 @@ class Walker extends \Walker_Nav_Menu
         $classes[] = 'mega-menu-ajax-item';
         $classes[] = 'menu-item-' . $item->ID;
         
-        if (in_array('menu-item-has-children', $classes, true)) {
+        $has_children = in_array('menu-item-has-children', $classes, true);
+        
+        if ($has_children) {
             $classes[] = 'mega-menu-ajax-has-children';
         }
         
         $class_names = join(' ', apply_filters('mega_menu_ajax_css_class', array_filter($classes), $item, $args, $depth));
         $class_names = $class_names ? ' class="' . esc_attr($class_names) . '"' : '';
         
-        $output .= '<li' . $class_names . '>';
+        $data_attr = ' data-menu-item-id="' . esc_attr($item->ID) . '"';
+        
+        $output .= '<li' . $class_names . $data_attr . '>';
         
         $atts = [
             'title' => $item->attr_title ?? '',
@@ -48,7 +56,7 @@ class Walker extends \Walker_Nav_Menu
             'href' => $item->url ?? '',
         ];
         
-        if (in_array('menu-item-has-children', $classes, true)) {
+        if ($has_children) {
             $atts['aria-expanded'] = 'false';
             $atts['aria-haspopup'] = 'true';
         }
@@ -70,7 +78,7 @@ class Walker extends \Walker_Nav_Menu
         $item_output .= '<a' . $attributes . '>';
         $item_output .= ($args->link_before ?? '') . $title . ($args->link_after ?? '');
         
-        if (in_array('menu-item-has-children', $classes, true)) {
+        if ($has_children) {
             $item_output .= '<span class="mega-menu-ajax-indicator" aria-hidden="true"></span>';
         }
         
