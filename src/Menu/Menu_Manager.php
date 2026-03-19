@@ -39,6 +39,10 @@ class Menu_Manager
         register_setting('mega_menu_ajax_settings', 'mega_menu_ajax_lcp_image_url', [
             'sanitize_callback' => 'esc_url_raw',
         ]);
+        
+        register_setting('mega_menu_ajax_settings', 'mega_menu_ajax_preload_fonts', [
+            'sanitize_callback' => [$this, 'sanitize_font_urls'],
+        ]);
 
         add_settings_section(
             'mega_menu_ajax_global',
@@ -59,6 +63,14 @@ class Menu_Manager
             'lcp_image_url',
             __('LCP Preload Image', 'mega-menu-ajax'),
             [$this, 'render_lcp_image_url_field'],
+            'mega-menu-ajax',
+            'mega_menu_ajax_global'
+        );
+        
+        add_settings_field(
+            'preload_fonts',
+            __('Preload Fonts', 'mega-menu-ajax'),
+            [$this, 'render_preload_fonts_field'],
             'mega-menu-ajax',
             'mega_menu_ajax_global'
         );
@@ -177,6 +189,40 @@ class Menu_Manager
             <?php esc_html_e('Enter the LCP image URL to preload. Find this via PageSpeed Insights. Leave empty to disable.', 'mega-menu-ajax'); ?>
         </p>
         <?php
+    }
+
+    public function render_preload_fonts_field()
+    {
+        $fonts = get_option('mega_menu_ajax_preload_fonts', '');
+        ?>
+        <textarea name="mega_menu_ajax_preload_fonts" 
+                  rows="4" 
+                  class="large-text code"
+                  placeholder="https://example.com/fonts/Inter-Var.woff2
+https://example.com/fonts/custom-font.otf"><?php echo esc_textarea($fonts); ?></textarea>
+        <p class="description">
+            <?php esc_html_e('Enter font URLs to preload (one per line). Supports woff2, woff, ttf, otf, eot. Reduces font loading delay.', 'mega-menu-ajax'); ?>
+        </p>
+        <?php
+    }
+    
+    public function sanitize_font_urls($input)
+    {
+        if (empty($input)) {
+            return '';
+        }
+        
+        $urls = array_filter(array_map('trim', explode("\n", $input)));
+        $sanitized = [];
+        
+        foreach ($urls as $url) {
+            $url = esc_url_raw($url);
+            if (!empty($url)) {
+                $sanitized[] = $url;
+            }
+        }
+        
+        return implode("\n", $sanitized);
     }
 
     public function render_locations_section()

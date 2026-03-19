@@ -52,6 +52,7 @@ class Plugin
         }
         
         new \Mega_Menu_Ajax\Performance\LCP_Preload();
+        new \Mega_Menu_Ajax\Performance\Font_Preload();
     }
 
     public function load_textdomain()
