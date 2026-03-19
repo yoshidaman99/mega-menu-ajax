@@ -33,6 +33,8 @@ class Plugin
         add_filter('wp_nav_menu_args', [$this, 'filter_nav_menu_args'], 100);
         add_filter('megamenu_nav_menu_css_class', [$this, 'add_lazy_class_to_megamenu'], 10, 3);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
+        add_action('wp_head', [$this, 'add_preload_hints'], 1);
+        add_filter('wp_resource_hints', [$this, 'add_preconnect_hints'], 10, 2);
     }
 
     private function load_components()
@@ -298,5 +300,28 @@ class Plugin
     public function get_logger()
     {
         return $this->debug_logger;
+    }
+
+    public function add_preload_hints()
+    {
+        $css_url = MEGA_MENU_AJAX_URL . 'assets/css/frontend.css';
+        echo '<link rel="preload" href="' . esc_url($css_url) . '" as="style" fetchpriority="high">' . "\n";
+    }
+
+    public function add_preconnect_hints($urls, $relation_type)
+    {
+        if ($relation_type === 'preconnect') {
+            $ajax_url = admin_url('admin-ajax.php');
+            $parsed = wp_parse_url($ajax_url);
+            if (!empty($parsed['host'])) {
+                $scheme = !empty($parsed['scheme']) ? $parsed['scheme'] . '://' : '//';
+                $port = !empty($parsed['port']) ? ':' . $parsed['port'] : '';
+                $preconnect_url = $scheme . $parsed['host'] . $port;
+                if (!in_array($preconnect_url, $urls, true)) {
+                    $urls[] = $preconnect_url;
+                }
+            }
+        }
+        return $urls;
     }
 }

@@ -11,8 +11,34 @@ class Style_Manager
     public function __construct()
     {
         add_action('wp_enqueue_scripts', [$this, 'enqueue_inline_css'], 99);
+        add_action('wp_head', [$this, 'output_critical_css'], 1);
         add_action('customize_save_after', [$this, 'clear_css_cache']);
         add_action('update_option_mega_menu_ajax_settings', [$this, 'clear_css_cache']);
+    }
+
+    public function output_critical_css()
+    {
+        $settings = get_option('mega_menu_ajax_settings', []);
+        $has_enabled = false;
+        
+        foreach ($settings as $location => $location_settings) {
+            if (!empty($location_settings['enabled'])) {
+                $has_enabled = true;
+                break;
+            }
+        }
+        
+        if (!$has_enabled) {
+            return;
+        }
+        
+        $critical_css = $this->get_critical_css();
+        echo "<style id=\"mega-menu-ajax-critical-css\">\n{$critical_css}\n</style>\n";
+    }
+
+    private function get_critical_css()
+    {
+        return ".mega-menu-ajax-wrap{position:relative}.mega-menu-ajax-wrap *{box-sizing:border-box}.mega-menu-ajax-menu{display:flex;list-style:none;margin:0;padding:0}.mega-menu-ajax-item{position:relative;margin:0;padding:0}.mega-menu-ajax-submenu{position:absolute;left:0;top:100%;min-width:200px;opacity:0;visibility:hidden;list-style:none;margin:0;padding:0;z-index:1000}.mega-menu-ajax-item:hover>.mega-menu-ajax-submenu,.mega-menu-ajax-item.mega-menu-ajax-active>.mega-menu-ajax-submenu{opacity:1;visibility:visible}.mega-menu-ajax-indicator::after{content:'';display:inline-block;border:4px solid transparent;border-top-color:currentColor;margin-left:.5em;vertical-align:middle}.mega-menu-ajax-placeholder{min-height:40px;display:flex;align-items:center;justify-content:center;background:#f5f5f5;border:1px dashed #ddd}.mega-menu-ajax-spinner{width:20px;height:20px;border:2px solid #e0e0e0;border-top-color:#0073aa;border-radius:50%;animation:mega-menu-ajax-spin 1s linear infinite}@keyframes mega-menu-ajax-spin{to{transform:rotate(360deg)}}";
     }
 
     public function enqueue_inline_css()

@@ -187,7 +187,9 @@ class Menu_Manager
                        <?php checked(!empty($settings['lazy_load'])); ?>>
                 <?php esc_html_e('Lazy load entire menu', 'mega-menu-ajax'); ?>
             </label>
-            <br>
+            <p class="description" style="margin-left: 22px; margin-top: 2px; color: #d63638;">
+                <?php esc_html_e('Warning: Not recommended for menus visible on initial page load (impacts LCP/Core Web Vitals).', 'mega-menu-ajax'); ?>
+            </p>
             <label>
                 <input type="checkbox" 
                        name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][search_enabled]" 
