@@ -722,6 +722,7 @@
                         link.rel = 'preload';
                         link.as = 'style';
                         link.href = url;
+                        link.fetchPriority = 'high';
                         head.appendChild(link);
                     }
                 });
@@ -734,6 +735,7 @@
                         link.rel = 'preload';
                         link.as = 'script';
                         link.href = url;
+                        link.fetchPriority = 'high';
                         head.appendChild(link);
                     }
                 });

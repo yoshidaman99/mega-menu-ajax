@@ -68,6 +68,13 @@ class Plugin
             MEGA_MENU_AJAX_VERSION
         );
 
+        add_filter('style_loader_tag', function($html, $handle) {
+            if ($handle === 'mega-menu-ajax-frontend') {
+                return str_replace('<link', '<link fetchpriority="high"', $html);
+            }
+            return $html;
+        }, 10, 2);
+
         wp_enqueue_script(
             'mega-menu-ajax-frontend',
             MEGA_MENU_AJAX_URL . 'assets/js/frontend.js',
@@ -75,6 +82,13 @@ class Plugin
             MEGA_MENU_AJAX_VERSION,
             true
         );
+
+        add_filter('script_loader_tag', function($html, $handle) {
+            if ($handle === 'mega-menu-ajax-frontend') {
+                return str_replace('<script', '<script async fetchpriority="high"', $html);
+            }
+            return $html;
+        }, 10, 2);
 
         $settings = get_option('mega_menu_ajax_settings', []);
         $preload_settings = [];
