@@ -39,13 +39,17 @@ class Plugin
 
     private function load_components()
     {
+        \Mega_Menu_Ajax\Performance\Menu_Cache::get_instance();
+        
         new \Mega_Menu_Ajax\Menu\Menu_Manager();
         new \Mega_Menu_Ajax\Menu\Style_Manager();
-        new \Mega_Menu_Ajax\Ajax\Sub_Menu_Loader();
+        \Mega_Menu_Ajax\Ajax\Sub_Menu_Loader::get_instance();
         new \Mega_Menu_Ajax\Ajax\Menu_Lazy_Load();
         new \Mega_Menu_Ajax\Ajax\Search_Handler();
         new \Mega_Menu_Ajax\Ajax\Page_Preload();
         new \Mega_Menu_Ajax\Ajax\Background_Preload();
+        
+        \Mega_Menu_Ajax\Integration\Max_Mega_Menu::get_instance();
         
         if (did_action('elementor/loaded')) {
             new \Mega_Menu_Ajax\Elementor\Integration();
@@ -53,6 +57,7 @@ class Plugin
         
         new \Mega_Menu_Ajax\Performance\LCP_Preload();
         new \Mega_Menu_Ajax\Performance\Font_Preload();
+        \Mega_Menu_Ajax\Performance\Early_Hints::get_instance();
     }
 
     public function load_textdomain()
