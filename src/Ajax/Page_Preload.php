@@ -106,17 +106,7 @@ class Page_Preload
             $assets['css'] = array_unique($assets['css']);
         }
 
-        preg_match_all('/<script[^>]+src=["\']([^"\']+)["\']?/i', $html, $js_matches);
-        if (!empty($js_matches[1])) {
-            foreach ($js_matches[1] as $url) {
-                $url = self::resolve_url($url, $base_url);
-                if ($url && !self::is_external($url)) {
-                    $assets['js'][] = $url;
-                }
-            }
-            $assets['js'] = array_unique($assets['js']);
-        }
-
+        $assets['js'] = [];
         $assets['images'] = [];
 
         return apply_filters('mega_menu_ajax_extracted_assets', $assets, $html, $base_url);

@@ -108,7 +108,6 @@ class Menu_Manager
                     'preload_enabled' => !empty($settings['preload_enabled']),
                     'preload_delay' => absint($settings['preload_delay'] ?? 30),
                     'preload_css' => !empty($settings['preload_css']),
-                    'preload_js' => !empty($settings['preload_js']),
                     'prerender_enabled' => !empty($settings['prerender_enabled']),
                     'background_preload_enabled' => !empty($settings['background_preload_enabled']),
                     'background_preload_limit' => absint($settings['background_preload_limit'] ?? 5),
@@ -263,29 +262,21 @@ class Menu_Manager
                        class="small-text">
             </label>
             <br>
-            <label>
-                <input type="checkbox" 
-                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_css]" 
-                       value="1" 
-                       <?php checked(!empty($settings['preload_css'])); ?>>
-                <?php esc_html_e('Preload CSS assets', 'mega-menu-ajax'); ?>
-            </label>
-            <br>
-            <label>
-                <input type="checkbox" 
-                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_js]" 
-                       value="1" 
-                       <?php checked(!empty($settings['preload_js'])); ?>>
-                <?php esc_html_e('Preload JS assets', 'mega-menu-ajax'); ?>
-            </label>
-            <br>
-            <label>
-                <input type="checkbox" 
-                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][prerender_enabled]" 
-                       value="1" 
-                       <?php checked(!empty($settings['prerender_enabled'])); ?>>
-                <?php esc_html_e('Enable full page prerender', 'mega-menu-ajax'); ?>
-            </label>
+             <label>
+                 <input type="checkbox" 
+                        name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_css]" 
+                        value="1" 
+                        <?php checked(!empty($settings['preload_css'])); ?>>
+                 <?php esc_html_e('Preload CSS assets', 'mega-menu-ajax'); ?>
+             </label>
+             <br>
+             <label>
+                 <input type="checkbox" 
+                        name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][prerender_enabled]" 
+                        value="1" 
+                        <?php checked(!empty($settings['prerender_enabled'])); ?>>
+                 <?php esc_html_e('Enable full page prerender', 'mega-menu-ajax'); ?>
+             </label>
             <p class="description" style="margin-left: 22px; margin-top: 2px; color: #d63638;">
                 <?php esc_html_e('Warning: Prerender loads entire pages in background (images, JS, CSS) for instant navigation. Uses more bandwidth.', 'mega-menu-ajax'); ?>
             </p>

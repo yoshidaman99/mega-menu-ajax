@@ -745,19 +745,6 @@
                     }
                 });
             }
-
-            if (assets.js && settings.preload_js) {
-                assets.js.forEach(function (url) {
-                    if (!self.isAlreadyPreloaded(url, 'script')) {
-                        var link = document.createElement('link');
-                        link.rel = 'preload';
-                        link.as = 'script';
-                        link.href = url;
-                        link.fetchPriority = 'high';
-                        head.appendChild(link);
-                    }
-                });
-            }
         },
 
         isAlreadyPreloaded: function (url, type) {

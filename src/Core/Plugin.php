@@ -145,7 +145,6 @@ class Plugin
                     'enabled' => true,
                     'delay' => absint($location_settings['preload_delay'] ?? 30),
                     'preload_css' => !empty($location_settings['preload_css']),
-                    'preload_js' => !empty($location_settings['preload_js']),
                     'prerender_enabled' => !empty($location_settings['prerender_enabled']),
                 ];
             }
