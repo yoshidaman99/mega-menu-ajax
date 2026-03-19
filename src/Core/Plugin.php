@@ -65,6 +65,14 @@ class Plugin
 
     public function enqueue_frontend_assets()
     {
+        $critical_css_path = MEGA_MENU_AJAX_PATH . 'assets/css/frontend-critical.css';
+        if (file_exists($critical_css_path)) {
+            $critical_css = file_get_contents($critical_css_path);
+            wp_register_style('mega-menu-ajax-critical', false, [], MEGA_MENU_AJAX_VERSION);
+            wp_enqueue_style('mega-menu-ajax-critical');
+            wp_add_inline_style('mega-menu-ajax-critical', $critical_css);
+        }
+
         $is_mobile = wp_is_mobile();
         
         if ($is_mobile) {
@@ -84,7 +92,21 @@ class Plugin
 
             add_filter('style_loader_tag', function($html, $handle) {
                 if ($handle === 'mega-menu-ajax-frontend') {
-                    return str_replace('<link', '<link fetchpriority="high"', $html);
+                    $html = preg_replace(
+                        "/rel='stylesheet'/",
+                        "rel='preload' as='style' onload=\"this.rel='stylesheet'\"",
+                        $html
+                    );
+                    $html = preg_replace(
+                        '/rel="stylesheet"/',
+                        'rel="preload" as="style" onload="this.rel=\'stylesheet\'"',
+                        $html
+                    );
+                    preg_match('/href=[\'"]([^\'"]+)[\'"]/', $html, $matches);
+                    $src = $matches[1] ?? '';
+                    if ($src) {
+                        $html .= "<noscript><link rel='stylesheet' href='" . esc_url($src) . "'></noscript>";
+                    }
                 }
                 return $html;
             }, 10, 2);
