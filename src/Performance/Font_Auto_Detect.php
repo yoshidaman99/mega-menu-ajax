@@ -9,6 +9,7 @@ class Font_Auto_Detect
     private $cache_key = 'mega_menu_ajax_detected_fonts';
     private $external_css_cache_key = 'mega_menu_ajax_external_css_fonts';
     private $cache_ttl = DAY_IN_SECONDS;
+    private $max_preload_fonts = 2;
 
     public function __construct()
     {
@@ -42,6 +43,10 @@ class Font_Auto_Detect
         if (!is_array($fonts)) {
             return;
         }
+
+        $max = get_option('mega_menu_ajax_max_preload_fonts', 2);
+        $max = apply_filters('mega_menu_ajax_max_preload_fonts', absint($max));
+        $fonts = array_slice($fonts, 0, $max);
 
         foreach ($fonts as $font) {
             if (empty($font['url'])) {

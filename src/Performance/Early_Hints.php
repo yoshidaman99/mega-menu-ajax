@@ -39,8 +39,6 @@ class Early_Hints
             return;
         }
         
-        $this->add_preconnect(set_url_scheme(admin_url('admin-ajax.php'), 'https'));
-        
         $lcp_image = get_option('mega_menu_ajax_lcp_image_url', '');
         if (!empty($lcp_image)) {
             $this->add_preload('image', $lcp_image, 'high');
@@ -56,9 +54,6 @@ class Early_Hints
             }
         }
         
-        $rest_url = rest_url('mega-menu-ajax/v1/');
-        $this->add_preconnect(preg_replace('#^https?://([^/]+)/.*$#', 'https://$1', $rest_url));
-        
         $detected_fonts = get_transient('mega_menu_ajax_detected_fonts');
         $font_cdn_hosts = [];
         $site_host = strtolower(wp_parse_url(site_url(), PHP_URL_HOST) ?? '');
@@ -66,6 +61,9 @@ class Early_Hints
             $site_host = substr($site_host, 4);
         }
         if (is_array($detected_fonts)) {
+            $max_fonts = get_option('mega_menu_ajax_max_preload_fonts', 2);
+            $max_fonts = apply_filters('mega_menu_ajax_max_preload_fonts', absint($max_fonts));
+            $detected_fonts = array_slice($detected_fonts, 0, $max_fonts);
             foreach ($detected_fonts as $font) {
                 if (empty($font['url'])) {
                     continue;

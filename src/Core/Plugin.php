@@ -384,18 +384,6 @@ class Plugin
 
     public function add_preconnect_hints($urls, $relation_type)
     {
-        if ($relation_type === 'preconnect' && wp_is_mobile()) {
-            $ajax_url = admin_url('admin-ajax.php');
-            $parsed = wp_parse_url($ajax_url);
-            if (!empty($parsed['host'])) {
-                $scheme = !empty($parsed['scheme']) ? $parsed['scheme'] . '://' : '//';
-                $port = !empty($parsed['port']) ? ':' . $parsed['port'] : '';
-                $preconnect_url = $scheme . $parsed['host'] . $port;
-                if (!in_array($preconnect_url, $urls, true)) {
-                    $urls[] = $preconnect_url;
-                }
-            }
-        }
         return $urls;
     }
 }

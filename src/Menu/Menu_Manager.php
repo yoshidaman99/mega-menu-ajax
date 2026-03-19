@@ -75,6 +75,19 @@ class Menu_Manager
             'mega_menu_ajax_global'
         );
 
+        register_setting('mega_menu_ajax_settings', 'mega_menu_ajax_max_preload_fonts', [
+            'sanitize_callback' => [$this, 'sanitize_max_fonts'],
+            'default' => 2,
+        ]);
+
+        add_settings_field(
+            'max_preload_fonts',
+            __('Max Preload Fonts', 'mega-menu-ajax'),
+            [$this, 'render_max_preload_fonts_field'],
+            'mega-menu-ajax',
+            'mega_menu_ajax_global'
+        );
+
         add_settings_section(
             'mega_menu_ajax_locations',
             __('Menu Locations', 'mega-menu-ajax'),
@@ -223,6 +236,34 @@ https://example.com/fonts/custom-font.otf"><?php echo esc_textarea($fonts); ?></
         }
         
         return implode("\n", $sanitized);
+    }
+
+    public function render_max_preload_fonts_field()
+    {
+        $max = get_option('mega_menu_ajax_max_preload_fonts', 2);
+        ?>
+        <input type="number" 
+               name="mega_menu_ajax_max_preload_fonts" 
+               value="<?php echo esc_attr($max); ?>" 
+               min="1" 
+               max="6" 
+               class="small-text">
+        <p class="description">
+            <?php esc_html_e('Maximum fonts to preload for LCP. Lower = faster initial render. Default: 2.', 'mega-menu-ajax'); ?>
+        </p>
+        <?php
+    }
+
+    public function sanitize_max_fonts($input)
+    {
+        $val = absint($input);
+        if ($val < 1) {
+            $val = 1;
+        }
+        if ($val > 6) {
+            $val = 6;
+        }
+        return $val;
     }
 
     public function render_locations_section()
