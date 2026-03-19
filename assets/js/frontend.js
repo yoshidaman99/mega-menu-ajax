@@ -41,7 +41,8 @@
             this.initLazyLoad();
             this.initSearch();
             this.initPreload();
-            this.initBackgroundPreload();
+            this.backgroundPreloadInitialized = false;
+            this.pageFullyLoaded = false;
             this.markLazySubmenus();
             
             this.log('Initialized successfully');
@@ -431,7 +432,14 @@
                 }
 
                 self.prerenderTimers[timerKey] = setTimeout(function () {
-                    self.nativePrerender(href);
+                    var prerenderEnabled = false;
+                    if (location && megaMenuAjax.preload && megaMenuAjax.preload[location]) {
+                        prerenderEnabled = megaMenuAjax.preload[location].prerender_enabled;
+                    }
+                    
+                    if (prerenderEnabled) {
+                        self.nativePrerender(href);
+                    }
                     self.speculationPrerender(href);
                 }, 20);
 
@@ -453,7 +461,17 @@
                 var href = $(this).attr('href');
                 if (href && href !== '#' && href.indexOf('javascript:') === 0) {
                     self.aggressiveFetch(href);
-                    self.nativePrerender(href);
+                    
+                    var $item = $(this).parent();
+                    var $wrap = $item.closest('.mega-menu-wrap, .mega-menu-ajax-wrap');
+                    var location = $wrap.data('location') || $wrap.attr('id');
+                    var prerenderEnabled = false;
+                    if (location && megaMenuAjax.preload && megaMenuAjax.preload[location]) {
+                        prerenderEnabled = megaMenuAjax.preload[location].prerender_enabled;
+                    }
+                    if (prerenderEnabled) {
+                        self.nativePrerender(href);
+                    }
                 }
             });
 
@@ -740,18 +758,6 @@
                     }
                 });
             }
-
-            if (assets.images && settings.preload_images) {
-                assets.images.forEach(function (url) {
-                    if (!self.isAlreadyPreloaded(url, 'image')) {
-                        var link = document.createElement('link');
-                        link.rel = 'preload';
-                        link.as = 'image';
-                        link.href = url;
-                        head.appendChild(link);
-                    }
-                });
-            }
         },
 
         isAlreadyPreloaded: function (url, type) {
@@ -787,7 +793,16 @@
                     this.activityTimeout = null;
                     this.networkIdleInterval = null;
                     this.visibilityObserver = null;
-                    this.idleCheckDelay = 2000;
+                    this.activityCount = 0;
+                    this.activityThreshold = 5;
+                    this.activityReset = null;
+                    
+                    var firstLocation = Object.keys(megaMenuAjax.backgroundPreload)[0];
+                    if (firstLocation && megaMenuAjax.backgroundPreload[firstLocation]) {
+                        this.idleCheckDelay = megaMenuAjax.backgroundPreload[firstLocation].delay || 2000;
+                    } else {
+                        this.idleCheckDelay = 2000;
+                    }
                     
                     this.detectNetworkCapabilities();
                     this.initIdleDetection();
@@ -795,7 +810,7 @@
                     this.bindEvents();
                     this.loadPreloadUrls();
                     
-                    self.log('BackgroundPreloadManager: Initialized');
+                    self.log('BackgroundPreloadManager: Initialized with delay:', this.idleCheckDelay);
                 },
                 
                 detectNetworkCapabilities: function () {
@@ -811,14 +826,19 @@
                     var activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
                     activityEvents.forEach(function (event) {
                         document.addEventListener(event, function () {
+                            manager.activityCount++;
                             manager.lastActivityTime = Date.now();
-                            if (manager.isActive === false) {
-                                manager.isActive = true;
-                                manager.pausePreloading();
+                            
+                            if (manager.activityCount > manager.activityThreshold) {
+                                if (manager.isActive === false) {
+                                    manager.isActive = true;
+                                    manager.pausePreloading();
+                                }
                             }
                             
-                            clearTimeout(manager.activityTimeout);
-                            manager.activityTimeout = setTimeout(function () {
+                            clearTimeout(manager.activityReset);
+                            manager.activityReset = setTimeout(function () {
+                                manager.activityCount = 0;
                                 manager.isActive = false;
                                 manager.maybeResumePreloading();
                             }, 1000);
@@ -857,8 +877,25 @@
                     
                     this.visibilityObserver = new IntersectionObserver(function (entries) {
                         entries.forEach(function (entry) {
-                            if (entry.isIntersecting) {
+                            if (entry.isIntersecting && self.pageFullyLoaded) {
                                 var location = entry.target.dataset.location;
+                                
+                                if (!location) {
+                                    var id = entry.target.id || '';
+                                    if (id.indexOf('mega-menu-') === 0) {
+                                        location = id.replace('mega-menu-', '');
+                                    }
+                                    if (!location) {
+                                        var classes = entry.target.className.split(' ');
+                                        for (var i = 0; i < classes.length; i++) {
+                                            if (classes[i].indexOf('mega-menu-wrap-') === 0) {
+                                                location = classes[i].replace('mega-menu-wrap-', '');
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                
                                 if (location && megaMenuAjax.backgroundPreload[location]) {
                                     self.log('BackgroundPreloadManager: Menu visible:', location);
                                     manager.maybeStartPreloading(location);
@@ -1054,6 +1091,23 @@
                     
                     menuWraps.forEach(function (wrap) {
                         var location = wrap.dataset.location;
+                        
+                        if (!location) {
+                            var id = wrap.id || '';
+                            if (id.indexOf('mega-menu-') === 0) {
+                                location = id.replace('mega-menu-', '');
+                            }
+                            if (!location) {
+                                var classes = wrap.className.split(' ');
+                                for (var i = 0; i < classes.length; i++) {
+                                    if (classes[i].indexOf('mega-menu-wrap-') === 0) {
+                                        location = classes[i].replace('mega-menu-wrap-', '');
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
                         if (location && megaMenuAjax.backgroundPreload[location]) {
                             setTimeout(function () {
                                 manager.maybeStartPreloading(location);
@@ -1085,11 +1139,26 @@
             };
             
             this.BackgroundPreloadManager.init();
+        },
+        
+        triggerBackgroundPreload: function () {
+            if (this.backgroundPreloadInitialized) {
+                return;
+            }
+            
+            this.backgroundPreloadInitialized = true;
+            this.pageFullyLoaded = true;
+            this.log('Page fully loaded, starting background preload');
+            this.initBackgroundPreload();
         }
     };
 
     $(document).ready(function () {
         MegaMenuAjax.init();
+    });
+    
+    $(window).on('load', function () {
+        MegaMenuAjax.triggerBackgroundPreload();
     });
 
 })(jQuery);

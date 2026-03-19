@@ -109,7 +109,7 @@ class Menu_Manager
                     'preload_delay' => absint($settings['preload_delay'] ?? 30),
                     'preload_css' => !empty($settings['preload_css']),
                     'preload_js' => !empty($settings['preload_js']),
-                    'preload_images' => !empty($settings['preload_images']),
+                    'prerender_enabled' => !empty($settings['prerender_enabled']),
                     'background_preload_enabled' => !empty($settings['background_preload_enabled']),
                     'background_preload_limit' => absint($settings['background_preload_limit'] ?? 5),
                     'background_preload_delay' => absint($settings['background_preload_delay'] ?? 2000),
@@ -281,11 +281,14 @@ class Menu_Manager
             <br>
             <label>
                 <input type="checkbox" 
-                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][preload_images]" 
+                       name="mega_menu_ajax_settings[<?php echo esc_attr($location); ?>][prerender_enabled]" 
                        value="1" 
-                       <?php checked(!empty($settings['preload_images'])); ?>>
-                <?php esc_html_e('Preload images', 'mega-menu-ajax'); ?>
+                       <?php checked(!empty($settings['prerender_enabled'])); ?>>
+                <?php esc_html_e('Enable full page prerender', 'mega-menu-ajax'); ?>
             </label>
+            <p class="description" style="margin-left: 22px; margin-top: 2px; color: #d63638;">
+                <?php esc_html_e('Warning: Prerender loads entire pages in background (images, JS, CSS) for instant navigation. Uses more bandwidth.', 'mega-menu-ajax'); ?>
+            </p>
         </fieldset>
         <fieldset class="mega-menu-ajax-background-preload-settings">
             <h4 style="margin: 15px 0 10px; font-weight: 600;"><?php esc_html_e('Background Preloading', 'mega-menu-ajax'); ?></h4>

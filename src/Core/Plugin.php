@@ -32,6 +32,7 @@ class Plugin
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_filter('wp_nav_menu_args', [$this, 'filter_nav_menu_args'], 100);
         add_filter('megamenu_nav_menu_css_class', [$this, 'add_lazy_class_to_megamenu'], 10, 3);
+        add_filter('wp_nav_menu', [$this, 'add_location_data_attribute'], 10, 2);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_filter('wp_resource_hints', [$this, 'add_preconnect_hints'], 10, 2);
     }
@@ -123,7 +124,7 @@ class Plugin
                     'delay' => absint($location_settings['preload_delay'] ?? 30),
                     'preload_css' => !empty($location_settings['preload_css']),
                     'preload_js' => !empty($location_settings['preload_js']),
-                    'preload_images' => !empty($location_settings['preload_images']),
+                    'prerender_enabled' => !empty($location_settings['prerender_enabled']),
                 ];
             }
             if (!empty($location_settings['background_preload_enabled'])) {
@@ -230,6 +231,20 @@ class Plugin
         $args['container_class'] = trim('mega-menu-ajax-wrap mega-menu-ajax-wrap-' . esc_attr($location) . ' ' . ($args['container_class'] ?? ''));
 
         return $args;
+    }
+
+    public function add_location_data_attribute($nav_menu, $args)
+    {
+        $location = $args->theme_location ?? '';
+        if (!empty($location)) {
+            $nav_menu = preg_replace(
+                '/class="mega-menu-ajax-wrap/',
+                'data-location="' . esc_attr($location) . '" class="mega-menu-ajax-wrap',
+                $nav_menu,
+                1
+            );
+        }
+        return $nav_menu;
     }
 
     public function add_lazy_class_to_megamenu($classes, $item, $args)
