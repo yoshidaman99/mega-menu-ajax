@@ -18,6 +18,10 @@ class Style_Manager
 
     public function output_critical_css()
     {
+        if (!wp_is_mobile()) {
+            return;
+        }
+        
         $settings = get_option('mega_menu_ajax_settings', []);
         $has_enabled = false;
         

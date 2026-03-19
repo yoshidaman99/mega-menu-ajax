@@ -72,7 +72,18 @@ class Plugin
 
         add_filter('style_loader_tag', function($html, $handle) {
             if ($handle === 'mega-menu-ajax-frontend') {
-                return str_replace('<link', '<link fetchpriority="high"', $html);
+                if (wp_is_mobile()) {
+                    $html = str_replace(
+                        "rel='stylesheet'",
+                        "rel='preload' as='style' onload=\"this.rel='stylesheet'\"",
+                        $html
+                    );
+                    preg_match('/href=[\'"]([^\'"]+)[\'"]/', $html, $matches);
+                    $css_url = !empty($matches[1]) ? $matches[1] : MEGA_MENU_AJAX_URL . 'assets/css/frontend.css';
+                    $html .= "<noscript><link rel='stylesheet' href='" . esc_url($css_url) . "'></noscript>";
+                } else {
+                    $html = str_replace('<link', '<link fetchpriority="high"', $html);
+                }
             }
             return $html;
         }, 10, 2);
@@ -304,13 +315,16 @@ class Plugin
 
     public function add_preload_hints()
     {
+        if (!wp_is_mobile()) {
+            return;
+        }
         $css_url = MEGA_MENU_AJAX_URL . 'assets/css/frontend.css';
         echo '<link rel="preload" href="' . esc_url($css_url) . '" as="style" fetchpriority="high">' . "\n";
     }
 
     public function add_preconnect_hints($urls, $relation_type)
     {
-        if ($relation_type === 'preconnect') {
+        if ($relation_type === 'preconnect' && wp_is_mobile()) {
             $ajax_url = admin_url('admin-ajax.php');
             $parsed = wp_parse_url($ajax_url);
             if (!empty($parsed['host'])) {
