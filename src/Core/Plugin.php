@@ -33,7 +33,6 @@ class Plugin
         add_filter('wp_nav_menu_args', [$this, 'filter_nav_menu_args'], 100);
         add_filter('megamenu_nav_menu_css_class', [$this, 'add_lazy_class_to_megamenu'], 10, 3);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
-        add_action('wp_head', [$this, 'add_preload_hints'], 1);
         add_filter('wp_resource_hints', [$this, 'add_preconnect_hints'], 10, 2);
     }
 
@@ -63,30 +62,30 @@ class Plugin
 
     public function enqueue_frontend_assets()
     {
-        wp_enqueue_style(
-            'mega-menu-ajax-frontend',
-            MEGA_MENU_AJAX_URL . 'assets/css/frontend.css',
-            [],
-            MEGA_MENU_AJAX_VERSION
-        );
-
-        add_filter('style_loader_tag', function($html, $handle) {
-            if ($handle === 'mega-menu-ajax-frontend') {
-                if (wp_is_mobile()) {
-                    $html = str_replace(
-                        "rel='stylesheet'",
-                        "rel='preload' as='style' onload=\"this.rel='stylesheet'\"",
-                        $html
-                    );
-                    preg_match('/href=[\'"]([^\'"]+)[\'"]/', $html, $matches);
-                    $css_url = !empty($matches[1]) ? $matches[1] : MEGA_MENU_AJAX_URL . 'assets/css/frontend.css';
-                    $html .= "<noscript><link rel='stylesheet' href='" . esc_url($css_url) . "'></noscript>";
-                } else {
-                    $html = str_replace('<link', '<link fetchpriority="high"', $html);
+        $is_mobile = wp_is_mobile();
+        
+        if ($is_mobile) {
+            add_filter('style_loader_tag', function($html, $handle) {
+                if ($handle === 'mega-menu-ajax-frontend') {
+                    return '';
                 }
-            }
-            return $html;
-        }, 10, 2);
+                return $html;
+            }, 10, 2);
+        } else {
+            wp_enqueue_style(
+                'mega-menu-ajax-frontend',
+                MEGA_MENU_AJAX_URL . 'assets/css/frontend.css',
+                [],
+                MEGA_MENU_AJAX_VERSION
+            );
+
+            add_filter('style_loader_tag', function($html, $handle) {
+                if ($handle === 'mega-menu-ajax-frontend') {
+                    return str_replace('<link', '<link fetchpriority="high"', $html);
+                }
+                return $html;
+            }, 10, 2);
+        }
 
         wp_enqueue_script(
             'mega-menu-ajax-frontend',
@@ -311,15 +310,6 @@ class Plugin
     public function get_logger()
     {
         return $this->debug_logger;
-    }
-
-    public function add_preload_hints()
-    {
-        if (!wp_is_mobile()) {
-            return;
-        }
-        $css_url = MEGA_MENU_AJAX_URL . 'assets/css/frontend.css';
-        echo '<link rel="preload" href="' . esc_url($css_url) . '" as="style" fetchpriority="high">' . "\n";
     }
 
     public function add_preconnect_hints($urls, $relation_type)
