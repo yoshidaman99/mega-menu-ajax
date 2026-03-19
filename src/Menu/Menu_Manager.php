@@ -119,11 +119,23 @@ class Menu_Manager
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <form action="options.php" method="post">
+            <div class="nav-tab-wrapper">
+                <a href="#menu-settings" class="nav-tab nav-tab-active"><?php esc_html_e('Menu Settings', 'mega-menu-ajax'); ?></a>
+                <a href="#performance" class="nav-tab"><?php esc_html_e('Performance', 'mega-menu-ajax'); ?></a>
+            </div>
+            <form action="options.php" method="post" id="menu-settings-tab" class="mega-menu-ajax-tab active">
                 <?php
                 settings_fields('mega_menu_ajax_settings');
                 do_settings_sections('mega-menu-ajax');
                 submit_button(__('Save Settings', 'mega-menu-ajax'));
+                ?>
+            </form>
+            <form action="options.php" method="post" id="performance-tab" class="mega-menu-ajax-tab">
+                <?php
+                settings_fields('mega_menu_ajax_performance');
+                $performance_module = \Mega_Menu_Ajax\Performance\Module::get_instance();
+                $performance_module->render_settings_section();
+                submit_button(__('Save Performance Settings', 'mega-menu-ajax'));
                 ?>
             </form>
         </div>

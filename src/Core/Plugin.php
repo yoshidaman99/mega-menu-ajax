@@ -49,6 +49,16 @@ class Plugin
         if (did_action('elementor/loaded')) {
             new \Mega_Menu_Ajax\Elementor\Integration();
         }
+        
+        if (!wp_is_mobile() || $this->is_performance_enabled()) {
+            \Mega_Menu_Ajax\Performance\Module::get_instance();
+        }
+    }
+
+    private function is_performance_enabled()
+    {
+        $perf_settings = get_option('mega_menu_ajax_performance', []);
+        return !empty($perf_settings['lcp_optimizer_enabled']) || !empty($perf_settings['css_optimizer_enabled']);
     }
 
     public function load_textdomain()
