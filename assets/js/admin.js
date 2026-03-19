@@ -8,8 +8,6 @@
         init: function () {
             this.bindEvents();
             this.initSortable();
-            this.initTabs();
-            this.initClearCache();
         },
 
         bindEvents: function () {
@@ -39,60 +37,6 @@
                     }
                 });
             }
-        },
-
-        initTabs: function () {
-            $('.nav-tab-wrapper .nav-tab').on('click', function (e) {
-                e.preventDefault();
-                
-                var target = $(this).attr('href');
-                
-                $('.nav-tab-wrapper .nav-tab').removeClass('nav-tab-active');
-                $(this).addClass('nav-tab-active');
-                
-                $('.mega-menu-ajax-tab').removeClass('active');
-                $(target + '-tab').addClass('active');
-            });
-        },
-
-        initClearCache: function () {
-            $('#mega-menu-ajax-clear-performance-cache').on('click', function (e) {
-                e.preventDefault();
-                
-                var $button = $(this);
-                var $status = $('#mega-menu-ajax-cache-clear-status');
-                var nonce = $button.data('nonce');
-                
-                $button.prop('disabled', true);
-                $status.removeClass('success error').text('Clearing...');
-                
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'mega_menu_ajax_clear_performance_cache',
-                        nonce: nonce
-                    },
-                    success: function (response) {
-                        if (response.success) {
-                            $status.addClass('success').text(response.data.message);
-                        } else {
-                            $status.addClass('error').text(response.data.message || 'Error clearing cache');
-                        }
-                    },
-                    error: function () {
-                        $status.addClass('error').text('Error clearing cache');
-                    },
-                    complete: function () {
-                        $button.prop('disabled', false);
-                        setTimeout(function () {
-                            $status.fadeOut(function () {
-                                $status.text('').removeClass('success error').show();
-                            });
-                        }, 3000);
-                    }
-                });
-            });
         }
     };
 

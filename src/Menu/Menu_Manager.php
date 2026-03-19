@@ -35,6 +35,10 @@ class Menu_Manager
         register_setting('mega_menu_ajax_settings', 'mega_menu_ajax_settings', [
             'sanitize_callback' => [$this, 'sanitize_settings'],
         ]);
+        
+        register_setting('mega_menu_ajax_settings', 'mega_menu_ajax_lcp_image_url', [
+            'sanitize_callback' => 'esc_url_raw',
+        ]);
 
         add_settings_section(
             'mega_menu_ajax_global',
@@ -47,6 +51,14 @@ class Menu_Manager
             'prefetch_timeout',
             __('Prefetch Timeout', 'mega-menu-ajax'),
             [$this, 'render_prefetch_timeout_field'],
+            'mega-menu-ajax',
+            'mega_menu_ajax_global'
+        );
+        
+        add_settings_field(
+            'lcp_image_url',
+            __('LCP Preload Image', 'mega-menu-ajax'),
+            [$this, 'render_lcp_image_url_field'],
             'mega-menu-ajax',
             'mega_menu_ajax_global'
         );
@@ -119,23 +131,11 @@ class Menu_Manager
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <div class="nav-tab-wrapper">
-                <a href="#menu-settings" class="nav-tab nav-tab-active"><?php esc_html_e('Menu Settings', 'mega-menu-ajax'); ?></a>
-                <a href="#performance" class="nav-tab"><?php esc_html_e('Performance', 'mega-menu-ajax'); ?></a>
-            </div>
-            <form action="options.php" method="post" id="menu-settings-tab" class="mega-menu-ajax-tab active">
+            <form action="options.php" method="post">
                 <?php
                 settings_fields('mega_menu_ajax_settings');
                 do_settings_sections('mega-menu-ajax');
                 submit_button(__('Save Settings', 'mega-menu-ajax'));
-                ?>
-            </form>
-            <form action="options.php" method="post" id="performance-tab" class="mega-menu-ajax-tab">
-                <?php
-                settings_fields('mega_menu_ajax_performance');
-                $performance_module = \Mega_Menu_Ajax\Performance\Module::get_instance();
-                $performance_module->render_settings_section();
-                submit_button(__('Save Performance Settings', 'mega-menu-ajax'));
                 ?>
             </form>
         </div>
@@ -161,6 +161,21 @@ class Menu_Manager
         <span><?php esc_html_e('ms', 'mega-menu-ajax'); ?></span>
         <p class="description">
             <?php esc_html_e('Abort prefetch if it takes longer than this. Lower = faster fallback navigation. Default: 300ms', 'mega-menu-ajax'); ?>
+        </p>
+        <?php
+    }
+
+    public function render_lcp_image_url_field()
+    {
+        $lcp_url = get_option('mega_menu_ajax_lcp_image_url', '');
+        ?>
+        <input type="url" 
+               name="mega_menu_ajax_lcp_image_url" 
+               value="<?php echo esc_attr($lcp_url); ?>" 
+               class="regular-text"
+               placeholder="https://example.com/image.jpg">
+        <p class="description">
+            <?php esc_html_e('Enter the LCP image URL to preload. Find this via PageSpeed Insights. Leave empty to disable.', 'mega-menu-ajax'); ?>
         </p>
         <?php
     }
