@@ -12,6 +12,7 @@ class Style_Manager
     {
         add_action('wp_enqueue_scripts', [$this, 'enqueue_inline_css'], 99);
         add_action('wp_head', [$this, 'output_critical_css'], 1);
+        add_action('wp_head', [$this, 'output_critical_js'], 1);
         add_action('customize_save_after', [$this, 'clear_css_cache']);
         add_action('update_option_mega_menu_ajax_settings', [$this, 'clear_css_cache']);
     }
@@ -49,6 +50,27 @@ class Style_Manager
         $rtl_css = '.rtl .mega-menu-ajax-submenu .mega-menu-ajax-submenu{left:auto;right:100%}.rtl .mega-menu-ajax-indicator{margin-left:0;margin-right:.25rem}.mega-menu-ajax-preloading>a::after{content:"";display:inline-block;width:12px;height:12px;margin-left:6px;border:2px solid rgba(0,0,0,.1);border-top-color:currentColor;border-radius:50%;animation:megaMenuAjaxSpin .8s linear infinite;vertical-align:middle}.rtl .mega-menu-ajax-preloading>a::after{margin-left:0;margin-right:6px}';
         
         return $base_css . $mobile_css . $rtl_css;
+    }
+
+    public function output_critical_js()
+    {
+        $settings = get_option('mega_menu_ajax_settings', []);
+        $has_enabled = false;
+        
+        foreach ($settings as $location => $location_settings) {
+            if (!empty($location_settings['enabled'])) {
+                $has_enabled = true;
+                break;
+            }
+        }
+        
+        if (!$has_enabled) {
+            return;
+        }
+        
+        $js = '(function(){var d=document;function q(s){return d.querySelectorAll(s)};function h(e,c){e.classList.toggle(c)};d.addEventListener("click",function(e){var t=e.target;if(t.closest(".mega-menu-ajax-toggle")){h(t.closest(".mega-menu-ajax-wrap"),"mega-menu-ajax-open");e.preventDefault()}else if(t.closest(".mega-menu-ajax-item>a")){var p=t.closest(".mega-menu-ajax-item");if(p&&p.querySelector(".mega-menu-ajax-submenu")&&window.innerWidth<=768){h(p,"mega-menu-ajax-active");e.preventDefault()}}if(!e.target.closest(".mega-menu-ajax-wrap")){q(".mega-menu-ajax-wrap").forEach(function(w){w.classList.remove("mega-menu-ajax-open")})}})})();';
+        
+        echo "<script id=\"mega-menu-ajax-critical-js\">\n{$js}\n</script>\n";
     }
 
     public function enqueue_inline_css()
