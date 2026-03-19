@@ -3,7 +3,7 @@ Contributors: yoshidaman99
 Tags: menu, mega menu, ajax menu, responsive menu, navigation, elementor
 Requires at least: 6.0
 Tested up to: 6.4
-Stable tag: 1.0.0
+Stable tag: 1.0.35
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -76,6 +76,11 @@ No! The AJAX loading features actually improve performance by loading menu conte
 5. Real-time search filtering menu items
 
 == Changelog ==
+
+= 1.0.35 =
+* Fix render-blocking CSS by switching preload strategy to media="print" onload pattern
+* Remove unsupported `type` attribute from font preload links to fix Lighthouse warnings
+* Add defensive filters to strip `type` from preload hints and tags site-wide
 
 = 1.0.0 =
 * Initial release

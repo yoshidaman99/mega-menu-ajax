@@ -31,11 +31,8 @@ class Font_Preload
                 continue;
             }
             
-            $font_type = $this->get_font_type($font_url);
-            
             printf(
-                '<link rel="preload" as="font" type="%s" href="%s" crossorigin>%s',
-                esc_attr($font_type),
+                '<link rel="preload" as="font" href="%s" crossorigin>%s',
                 $font_url,
                 "\n"
             );

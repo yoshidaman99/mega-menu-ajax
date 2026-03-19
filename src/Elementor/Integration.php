@@ -22,7 +22,6 @@ class Integration
 
     public function register_widgets($widgets_manager)
     {
-        require_once MEGA_MENU_AJAX_PATH . 'src/Elementor/Widgets/Menu_Widget.php';
         $widgets_manager->register(new Widgets\Menu_Widget());
     }
 }

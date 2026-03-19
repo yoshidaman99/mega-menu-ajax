@@ -180,7 +180,7 @@ class Max_Mega_Menu
         return false;
     }
 
-    public function add_lazy_classes($classes, $item, $args, $depth)
+    public function add_lazy_classes($classes, $item, $args, $depth = 0)
     {
         $settings = get_option('mega_menu_ajax_settings', []);
         $location = $args->theme_location ?? '';

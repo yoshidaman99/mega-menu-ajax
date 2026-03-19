@@ -17,7 +17,7 @@ class Sub_Menu_Loader
         return self::$instance;
     }
 
-    public function __construct()
+    private function __construct()
     {
         add_action('wp_ajax_mega_menu_ajax_load_submenu', [$this, 'ajax_load_submenu']);
         add_action('wp_ajax_nopriv_mega_menu_ajax_load_submenu', [$this, 'ajax_load_submenu']);

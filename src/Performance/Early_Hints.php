@@ -39,10 +39,6 @@ class Early_Hints
             return;
         }
         
-        $plugin_url = MEGA_MENU_AJAX_URL;
-        $version = MEGA_MENU_AJAX_VERSION;
-        
-        $this->add_preload('style', $plugin_url . 'assets/css/frontend.css?v=' . $version, 'high');
         $this->add_preconnect(set_url_scheme(admin_url('admin-ajax.php'), 'https'));
         
         $lcp_image = get_option('mega_menu_ajax_lcp_image_url', '');
@@ -54,18 +50,48 @@ class Early_Hints
         if (!empty($fonts)) {
             $font_urls = array_filter(array_map('trim', explode("\n", $fonts)));
             foreach ($font_urls as $font_url) {
-                $font_type = $this->get_font_type($font_url);
-                if ($font_type) {
-                    $this->add_preload('font', $font_url, 'high', [
-                        'crossorigin' => 'anonymous',
-                        'type' => $font_type,
-                    ]);
-                }
+                $this->add_preload('font', $font_url, 'high', [
+                    'crossorigin' => 'anonymous',
+                ]);
             }
         }
         
         $rest_url = rest_url('mega-menu-ajax/v1/');
         $this->add_preconnect(preg_replace('#^https?://([^/]+)/.*$#', 'https://$1', $rest_url));
+        
+        $detected_fonts = get_transient('mega_menu_ajax_detected_fonts');
+        $font_cdn_hosts = [];
+        $site_host = strtolower(wp_parse_url(site_url(), PHP_URL_HOST) ?? '');
+        if (strpos($site_host, 'www.') === 0) {
+            $site_host = substr($site_host, 4);
+        }
+        if (is_array($detected_fonts)) {
+            foreach ($detected_fonts as $font) {
+                if (empty($font['url'])) {
+                    continue;
+                }
+                $attrs = [];
+                $font_host = strtolower(wp_parse_url($font['url'], PHP_URL_HOST) ?? '');
+                if (strpos($font_host, 'www.') === 0) {
+                    $font_host = substr($font_host, 4);
+                }
+                $is_cross_origin = $site_host !== '' && $font_host !== '' && $site_host !== $font_host;
+                if ($is_cross_origin) {
+                    $attrs['crossorigin'] = 'anonymous';
+                    $raw_host = wp_parse_url($font['url'], PHP_URL_HOST);
+                    $scheme = wp_parse_url($font['url'], PHP_URL_SCHEME) ?? 'https';
+                    $cdn_domain = $scheme . '://' . $raw_host;
+                    if (!in_array($cdn_domain, $font_cdn_hosts, true)) {
+                        $font_cdn_hosts[] = $cdn_domain;
+                    }
+                }
+                $this->add_preload('font', $font['url'], 'high', $attrs);
+            }
+        }
+        
+        foreach ($font_cdn_hosts as $cdn) {
+            $this->add_preconnect($cdn);
+        }
     }
 
     private function get_font_type($url)
@@ -121,6 +147,9 @@ class Early_Hints
             
             if (!empty($preload['attrs'])) {
                 foreach ($preload['attrs'] as $key => $value) {
+                    if ($key === 'type') {
+                        continue;
+                    }
                     if ($value === true) {
                         $link .= '; ' . $key;
                     } else {
@@ -136,8 +165,7 @@ class Early_Hints
             @header('Link: ' . implode(', ', $links), false);
         }
         
-        @header('X-Mega-Menu-Ajax-Cache: HIT');
-        @header('Cache-Control: public, max-age=3600, stale-while-revalidate=86400');
+
     }
 
     public function add_resource_hints($urls, $relation_type)

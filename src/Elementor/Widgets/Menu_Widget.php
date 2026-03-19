@@ -235,7 +235,12 @@ class Menu_Widget extends Widget_Base
     protected function render()
     {
         $settings = $this->get_settings_for_display();
-        $location = $settings['menu_location'];
+        
+        if (!is_array($settings)) {
+            return;
+        }
+        
+        $location = $settings['menu_location'] ?? '';
 
         if (empty($location)) {
             echo '<p>' . esc_html__('Please select a menu location.', 'mega-menu-ajax') . '</p>';

@@ -35,6 +35,8 @@ class Plugin
         add_filter('wp_nav_menu', [$this, 'add_location_data_attribute'], 10, 2);
         add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_filter('wp_resource_hints', [$this, 'add_preconnect_hints'], 10, 2);
+        add_filter('wp_resource_hints', [$this, 'strip_preload_type_hints'], 999, 2);
+        add_filter('style_loader_tag', [$this, 'strip_preload_type_attr'], 999, 2);
     }
 
     private function load_components()
@@ -56,6 +58,7 @@ class Plugin
         }
         
         new \Mega_Menu_Ajax\Performance\LCP_Preload();
+        new \Mega_Menu_Ajax\Performance\Font_Auto_Detect();
         new \Mega_Menu_Ajax\Performance\Font_Preload();
         \Mega_Menu_Ajax\Performance\Early_Hints::get_instance();
     }
@@ -99,13 +102,13 @@ class Plugin
             add_filter('style_loader_tag', function($html, $handle) {
                 if ($handle === 'mega-menu-ajax-frontend') {
                     $html = preg_replace(
-                        "/rel='stylesheet'/",
-                        "rel='preload' as='style' onload=\"this.rel='stylesheet'\"",
+                        "/media='all'/",
+                        "media='print' onload=\"this.media='all'\"",
                         $html
                     );
                     $html = preg_replace(
-                        '/rel="stylesheet"/',
-                        'rel="preload" as="style" onload="this.rel=\'stylesheet\'"',
+                        '/media="all"/',
+                        'media="print" onload="this.media=\'all\'"',
                         $html
                     );
                     preg_match('/href=[\'"]([^\'"]+)[\'"]/', $html, $matches);
@@ -354,6 +357,29 @@ class Plugin
     public function get_logger()
     {
         return $this->debug_logger;
+    }
+
+    public function strip_preload_type_hints($urls, $relation_type)
+    {
+        if ($relation_type !== 'preload') {
+            return $urls;
+        }
+
+        foreach ($urls as $i => $url) {
+            if (is_array($url) && isset($url['type'])) {
+                unset($urls[$i]['type']);
+            }
+        }
+
+        return $urls;
+    }
+
+    public function strip_preload_type_attr($html, $handle)
+    {
+        if (strpos($html, 'rel=preload') !== false || strpos($html, "rel='preload'") !== false) {
+            $html = preg_replace('/\s+type=[\'"][^\'"]+[\'"]/', '', $html);
+        }
+        return $html;
     }
 
     public function add_preconnect_hints($urls, $relation_type)
