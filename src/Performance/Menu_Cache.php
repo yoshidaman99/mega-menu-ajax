@@ -258,6 +258,26 @@ class Menu_Cache
         }
     }
 
+    public function clear_all_plugin_caches()
+    {
+        $this->clear_all_caches();
+        $this->bump_cache_version();
+
+        delete_transient('mega_menu_ajax_css');
+
+        delete_transient('mega_menu_ajax_detected_fonts');
+        delete_transient('mega_menu_ajax_external_css_fonts');
+
+        global $wpdb;
+        $wpdb->query(
+            "DELETE FROM {$wpdb->options} 
+            WHERE option_name LIKE '_transient_mega_menu_ajax_preload_%' 
+            OR option_name LIKE '_site_transient_mega_menu_ajax_preload_%' 
+            OR option_name LIKE '_transient_mega_menu_ajax_bg_preload_%' 
+            OR option_name LIKE '_site_transient_mega_menu_ajax_bg_preload_%'"
+        );
+    }
+
     private function clear_menu_transients($menu_id)
     {
         global $wpdb;

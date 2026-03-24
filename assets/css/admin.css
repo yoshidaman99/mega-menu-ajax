@@ -83,3 +83,36 @@
 .mma-notice.mma-notice-error {
     border-left-color: #dc3232;
 }
+
+.mma-clear-cache-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.mma-clear-cache-info {
+    color: #50575e;
+    font-size: 13px;
+}
+
+#mma-clear-cache-btn {
+    flex-shrink: 0;
+}
+
+#mma-clear-cache-status {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+#mma-clear-cache-status.mma-cache-success {
+    color: #007cba;
+}
+
+#mma-clear-cache-status.mma-cache-error {
+    color: #d63638;
+}

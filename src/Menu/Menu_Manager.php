@@ -15,6 +15,7 @@ class Menu_Manager
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('wp_update_nav_menu', [$this, 'clear_cache']);
+        add_action('wp_ajax_mega_menu_ajax_clear_cache', [$this, 'ajax_clear_cache']);
     }
 
     public function add_admin_menu()
@@ -155,6 +156,16 @@ class Menu_Manager
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <div class="mma-clear-cache-bar">
+                <span class="mma-clear-cache-info">
+                    <?php esc_html_e('Clear all cached menu HTML, CSS, fonts, and preload data.', 'mega-menu-ajax'); ?>
+                </span>
+                <button type="button" id="mma-clear-cache-btn" class="button button-secondary">
+                    <span class="dashicons dashicons-trash" style="vertical-align: middle; margin-top: -2px; margin-right: 3px;"></span>
+                    <?php esc_html_e('Clear Cache', 'mega-menu-ajax'); ?>
+                </button>
+                <span id="mma-clear-cache-status" style="display: none;"></span>
+            </div>
             <form action="options.php" method="post">
                 <?php
                 settings_fields('mega_menu_ajax_settings');
@@ -427,6 +438,20 @@ https://example.com/fonts/custom-font.otf"><?php echo esc_textarea($fonts); ?></
             </label>
         </fieldset>
         <?php
+    }
+
+    public function ajax_clear_cache()
+    {
+        check_ajax_referer('mega_menu_ajax_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Unauthorized.', 'mega-menu-ajax')], 403);
+        }
+
+        $cache = \Mega_Menu_Ajax\Performance\Menu_Cache::get_instance();
+        $cache->clear_all_plugin_caches();
+
+        wp_send_json_success(['message' => __('All caches cleared.', 'mega-menu-ajax')]);
     }
 
     public function clear_cache($menu_id)
